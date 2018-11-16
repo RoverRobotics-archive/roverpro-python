@@ -1,12 +1,13 @@
 from time import sleep
-
+from typing import Callable
 import serial.threaded
-import struct
+
+from .openrover_data import OPENROVER_DATA_ELEMENTS
 
 
 class OpenRoverProtocol(serial.threaded.Protocol):
     SERIAL_START_BYTE = 253
-    on_data_read = None  # type: Callable[[str,int],None]
+    on_data_read: Callable[[str, int], None] = None
     transport = None  #
 
     @staticmethod
@@ -44,13 +45,14 @@ class OpenRoverProtocol(serial.threaded.Protocol):
 
             if packet[4] == self.checksum(packet[1:4]):
                 k = packet[1]
-                # todo: this way of decoding data is pretty lousy.
-                if k in (68, 70):
-                    # decode int16
-                    (v,) = struct.unpack_from('>h', packet, 2)
-                else:
-                    # decode uint16
-                    (v,) = struct.unpack_from('>H', packet, 2)
+                v = OPENROVER_DATA_ELEMENTS[k].data_format.unpack(packet[2:4])
+                ## todo: this way of decoding data is pretty lousy.
+                # if k in (68, 70):
+                #    # decode int16
+                #    (v,) = struct.unpack_from('>h', packet, 2)
+                # else:
+                #    # decode uint16
+                #    (v,) = struct.unpack_from('>H', packet, 2)
                 on_data_read = self.on_data_read
                 if on_data_read is not None:
                     on_data_read(k, v)
@@ -87,7 +89,7 @@ class OpenRover:
         self._latest_data = dict()
 
     def open(self, port, **serial_kwargs):
-        kwargs = dict(baudrate=57600, timeout=0.5, write_timeout=0.5, stopbits=2)
+        kwargs = dict(baudrate=57600, timeout=0.5, write_timeout=0.5, stopbits=1)
         kwargs.update(serial_kwargs)
         serial_device = serial.Serial(port, **kwargs)
         self._reader_thread = serial.threaded.ReaderThread(serial_device, OpenRoverProtocol)
@@ -97,7 +99,7 @@ class OpenRover:
         self._protocol.on_data_read = self.on_new_openrover_data
 
     def close(self):
-        self._protocol.close()
+        self._reader_thread.close()
 
     def on_new_openrover_data(self, key, value):
         self._latest_data[key] = value

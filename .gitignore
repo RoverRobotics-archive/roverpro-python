@@ -1,3 +1,10 @@
+### Python3 ###
+# Distribution / packaging
+build
+dist
+*.egg-info/
+
+
 ### PyCharm ###
 # User-specific stuff
 .idea/**/workspace.xml
