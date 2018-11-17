@@ -6,6 +6,10 @@ dist
 .eggs/
 __pycache__/
 
+# can be recreated with pipenv install -e . --dev
+/Pipfile
+/Pipfile.lock
+
 ### PyCharm ###
 # User-specific stuff
 .idea/**/workspace.xml
