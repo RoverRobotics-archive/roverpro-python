@@ -46,13 +46,6 @@ class OpenRoverProtocol(serial.threaded.Protocol):
             if packet[4] == self.checksum(packet[1:4]):
                 k = packet[1]
                 v = OPENROVER_DATA_ELEMENTS[k].data_format.unpack(packet[2:4])
-                ## todo: this way of decoding data is pretty lousy.
-                # if k in (68, 70):
-                #    # decode int16
-                #    (v,) = struct.unpack_from('>h', packet, 2)
-                # else:
-                #    # decode uint16
-                #    (v,) = struct.unpack_from('>H', packet, 2)
                 on_data_read = self.on_data_read
                 if on_data_read is not None:
                     on_data_read(k, v)

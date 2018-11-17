@@ -2,10 +2,8 @@ import time
 
 import pytest
 import serial
-from serial import SerialException
 import serial.tools.list_ports
-
-from .openrover import OpenRover
+from openrover import OpenRover
 
 
 @pytest.fixture
@@ -23,6 +21,7 @@ def rover():
 
 def test_raw_serial():
     p = find_rover_port()
+
     with serial.Serial(p, baudrate=57600, stopbits=1, write_timeout=2, timeout=2, inter_byte_timeout=2) as ser:
         time.sleep(0.2)
         scratch = ser.read_all()  # often when opening the device, we get a 0x255 as an initial value on the wire
@@ -39,8 +38,9 @@ def test_create():
 
 
 def test_missing_device():
+    assert False
     o = OpenRover()
-    with pytest.raises(SerialException):
+    with pytest.raises(serial.SerialException):
         o.open('missingdevice')
 
 

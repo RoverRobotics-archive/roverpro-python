@@ -3,7 +3,8 @@
 build
 dist
 *.egg-info/
-
+.eggs/
+__pycache__/
 
 ### PyCharm ###
 # User-specific stuff

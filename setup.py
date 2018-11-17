@@ -27,9 +27,11 @@ with open('README.md', 'r') as fh:
         install_requires=[
             'pyserial',
         ],
-        test_requires=[
-            'pytest',
-        ],
+
+        setup_requires=["pytest-runner"],
+        tests_require=["pytest"],
+        test_suite='openrover.tests',
+
         classifiers=[
             "Programming Language :: Python :: 3",
             "Programming Language :: Python :: 3.7",
