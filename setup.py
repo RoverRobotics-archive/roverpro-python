@@ -1,12 +1,14 @@
+from distutils.version import StrictVersion
+
 import setuptools
 import subprocess
-import re
 
 
 def get_git_version():
     version = subprocess.check_output(['git', 'describe', '--tags']).decode().strip()
-    # check that version number is formatted correctly as ###.###.###
-    assert re.fullmatch(r'\d+\.\d+\.\d+', version)
+    # check that version number is formatted correctly
+    # otherwise, this line will raise a ValueError
+    StrictVersion(version)
     return version
 
 
@@ -16,7 +18,7 @@ with open('README.md', 'r') as fh:
     setuptools.setup(
         name="openrover",
         version=get_git_version(),
-        author="Daniel Rose",
+        author="Dan Rose",
         author_email="dan@digilabs.io",
         description="A Python driver for driving the Rover Robotics OpenRover Basic robot",
         long_description=long_description,
@@ -27,7 +29,7 @@ with open('README.md', 'r') as fh:
         install_requires=[
             'pyserial',
         ],
-
+        license='BSD',
         setup_requires=["pytest-runner"],
         tests_require=["pytest"],
         test_suite='openrover.tests',
