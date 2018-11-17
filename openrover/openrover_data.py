@@ -3,7 +3,6 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass
 import struct
-
 import typing
 
 
@@ -46,12 +45,12 @@ class DataFormatChargerState(DataFormat):
 
     def pack(self, value):
         if value:
-            return b'\xda\xda'
+            return bytes.fromhex('dada')
         else:
-            return b'\0\0'
+            return bytes.fromhex('0000')
 
     def unpack(self, b):
-        if bytes(b) == b'\xda\xda':
+        if bytes(b) == bytes.fromhex('dada'):
             return True
         else:
             return False
