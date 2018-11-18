@@ -6,7 +6,9 @@ dist
 .eggs/
 __pycache__/
 
+# virtual environment
 Pipfile.lock
+.venv/
 
 ### PyCharm ###
 # User-specific stuff
