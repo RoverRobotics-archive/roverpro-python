@@ -5,9 +5,10 @@ verify_ssl = true
 
 [dev-packages]
 twine = "*"
+readme-renderer = "*"
 
 [packages]
-openrover = {path = "."}
+openrover = {editable = true, path = "."}
 
 [requires]
 python_version = "3.7"

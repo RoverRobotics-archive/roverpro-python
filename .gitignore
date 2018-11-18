@@ -6,6 +6,8 @@ dist
 .eggs/
 __pycache__/
 
+Pipfile.lock
+
 ### PyCharm ###
 # User-specific stuff
 .idea/**/workspace.xml
