@@ -24,7 +24,7 @@ def test_raw_serial():
 
     with serial.Serial(p, baudrate=57600, stopbits=1, write_timeout=2, timeout=2, inter_byte_timeout=2) as ser:
         time.sleep(0.2)
-        scratch = ser.read_all()  # often when opening the device, we get a 0x255 as an initial value on the wire
+        ser.read_all()  # often when opening the device, we get a 0x255 as an initial value on the wire
         time.sleep(0.2)
         # Hardcoded request for build number
         ser.write(bytearray([253, 125, 125, 125, 10, 40, 85]))
@@ -38,7 +38,6 @@ def test_create():
 
 
 def test_missing_device():
-    assert False
     o = OpenRover()
     with pytest.raises(serial.SerialException):
         o.open('missingdevice')
