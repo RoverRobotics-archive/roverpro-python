@@ -9,6 +9,7 @@ readme-renderer = "*"
 
 [packages]
 openrover = {editable = true,path = "."}
+observable = "*"
 
 [requires]
 python_version = "3.7"

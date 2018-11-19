@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass
+import enum
+from enum import Enum
 import struct
 import typing
 
