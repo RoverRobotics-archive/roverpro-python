@@ -1,10 +1,7 @@
-from collections import Counter
 from math import isclose
 import time
-from typing import Iterable
 
 import pytest
-from pytest import xfail
 import serial
 import serial.tools.list_ports
 from openrover import OpenRover, iterate_openrovers, find_openrover

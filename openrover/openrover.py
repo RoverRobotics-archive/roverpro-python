@@ -101,7 +101,7 @@ class OpenRover:
         kwargs.update(serial_kwargs)
         serial_device = serial.Serial(port, **kwargs)
         if not get_openrover_version(serial_device):
-            raise ValueError(f'Device {port} did not respond to a request for OpenRover version number. Is it an OpenRover? Is it powered on?')
+            raise OpenRoverException('Device did not respond to a request for OpenRover version number. Is it an OpenRover? Is it powered on?', {'port': port})
         self._reader_thread = serial.threaded.ReaderThread(serial_device, OpenRoverProtocol)
         self._reader_thread.start()
         self._reader_thread.connect()
