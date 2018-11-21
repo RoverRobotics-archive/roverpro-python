@@ -109,19 +109,19 @@ class DataElement:
 
 elements = [
     DataElement(0, UINT16, 'PWR_TOTAL_CURRENT', 'total current from battery in units of .029 Amps'),
-    DataElement(2, UINT16, 'MOTOR_FB_RPM.left'),
-    DataElement(4, UINT16, 'MOTOR_FB_RPM.right'),
+    DataElement(2, UINT16, 'MOTOR_FB_RPM.left'), #NOT YET IMPLEMENTED
+    DataElement(4, UINT16, 'MOTOR_FB_RPM.right'), #NOT YET IMPLEMENTED
     DataElement(6, UINT16, 'FLIPPER_FB_POSITION.pot1', 'flipper position sensor 1. 0=15 degrees; 1024=330 degrees;'),
     DataElement(8, UINT16, 'FLIPPER_FB_POSITION.pot2', 'flipper position sensor 2. 0=15 degrees; 1024=330 degrees;'),
-    DataElement(10, UINT16, 'MOTOR_FB_CURRENT_left', 'left motor current in units of .029 Amps'),
-    DataElement(12, UINT16, 'MOTOR_FB_CURRENT_right', 'right motor current in units of .029 Amps'),
+    DataElement(10, UINT16, 'MOTOR_FB_CURRENT_left', 'left motor current in units of 1/34 Amps'),
+    DataElement(12, UINT16, 'MOTOR_FB_CURRENT_right', 'right motor current in units of 1/34 Amps'),
     DataElement(14, UINT16, 'MOTOR_ENCODER_COUNT.left', 'left motor encoder count, mod 2**16'),
     DataElement(16, UINT16, 'MOTOR_ENCODER_COUNT.right', 'right motor encoder count, mod 2**16'),
-    DataElement(18, UINT16, 'MOTOR_FAULT_FLAG.left'),
+    DataElement(18, UINT16, 'MOTOR_FAULT_FLAGS'),
     DataElement(20, UINT16, 'MOTOR_TEMP.left', 'left motor temperature in Celsius'),
     DataElement(22, UINT16, 'MOTOR_TEMP.right', 'right motor temperature in Celsius'),
-    DataElement(24, UINT16, 'PWR_BAT_VOLTAGE.a', 'Voltage of Battery A in units of 0.017 Volts'),
-    DataElement(26, UINT16, 'PWR_BAT_VOLTAGE.b', 'Voltage of Battery B in units of 0.017 Volts'),
+    DataElement(24, UINT16, 'PWR_BAT_VOLTAGE.a', 'Voltage of Battery A in units of 1/58 Volt'),
+    DataElement(26, UINT16, 'PWR_BAT_VOLTAGE.b', 'Voltage of Battery B in units of 1/58 Volt'),
     DataElement(28, UINT16, 'REG_MOTOR_FB_PERIOD_LEFT', 'Left motor period in units of 45 μs'),
     DataElement(30, UINT16, 'REG_MOTOR_FB_PERIOD_RIGHT', 'Right motor period in units of 45 μs'),
     DataElement(32, UINT16, 'REG_MOTOR_FB_PERIOD_FLIPPER', 'Flipper motor period in units of 45 μs'),
@@ -140,8 +140,8 @@ elements = [
     DataElement(58, UINT16, 'BATTERY_MODE_B'),
     DataElement(60, UINT16, 'BATTERY_TEMP_A', 'in decikelvins above absolute 0'),
     DataElement(62, UINT16, 'BATTERY_TEMP_B', 'in decikelvins above absolute 0'),
-    DataElement(64, UINT16, 'BATTERY_VOLTAGE_A', 'sampled from the smartbattery over I2C'),
-    DataElement(66, UINT16, 'BATTERY_VOLTAGE_B', 'sampled from the smartbattery over I2C'),
+    DataElement(64, UINT16, 'BATTERY_VOLTAGE_A', 'mV; sampled from the smartbattery over I2C'),
+    DataElement(66, UINT16, 'BATTERY_VOLTAGE_B', 'mV; sampled from the smartbattery over I2C'),
     DataElement(68, INT16, 'BATTERY_CURRENT_A', 'current of the battery in mA. >0 = charging; <0 = discharging'),
     DataElement(70, INT16, 'BATTERY_CURRENT_B', 'current of the battery in mA. >0 = charging; <0 = discharging'),
 ]
