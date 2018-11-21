@@ -1,15 +1,18 @@
 import time
+from typing import Iterable
 
 import pytest
+from pytest import xfail
 import serial
 import serial.tools.list_ports
-from openrover import OpenRover
+from openrover import OpenRover, iterate_openrovers, find_openrover
 
 
 @pytest.fixture
 def rover():
-    p = find_rover_port()
-    if p is None:
+    try:
+        p = find_openrover()
+    except StopIteration:
         pytest.skip('Could not find attached Rover')
     o = OpenRover()
     o.open(p)
@@ -19,17 +22,9 @@ def rover():
     o.close()
 
 
-def test_raw_serial():
-    p = find_rover_port()
-
-    with serial.Serial(p, baudrate=57600, stopbits=1, write_timeout=2, timeout=2, inter_byte_timeout=2) as ser:
-        time.sleep(0.2)
-        ser.read_all()  # often when opening the device, we get a 0x255 as an initial value on the wire
-        time.sleep(0.2)
-        # Hardcoded request for build number
-        ser.write(bytearray([253, 125, 125, 125, 10, 40, 85]))
-        reply = list(ser.read(20))
-        assert reply[:3] == [253, 40, 158]
+def test_list_openrover_devices():
+    for s in iterate_openrovers():
+        assert isinstance(s, str)
 
 
 def test_create():
@@ -43,21 +38,6 @@ def test_missing_device():
         o.open('missingdevice')
 
 
-def find_rover_port():
-    for c in serial.tools.list_ports.comports():
-        if c.serial_number == 'FTA7T1MGA':
-            # this is the serial number for Dan's FTDI cable.
-            # just because it's plugged in doesn't actually mean there's a robot on the other end of it.
-            return c.device
-    return None
-
-
-def test_can_connect():
-    o = OpenRover()
-    o.open(find_rover_port())
-    o.close()
-
-
 def test_build_number(rover):
     time.sleep(0.1)
     build_no = rover.get_data_synchronous(40)
@@ -65,18 +45,38 @@ def test_build_number(rover):
     assert 40000 < build_no < 50000
 
 
-def test_speed(rover):
+# not yet working
+@pytest.mark.xfail
+def test_encoder_intervals(rover):
+    time.sleep(1)
     encoder_intervals = (rover.get_data_synchronous(28), rover.get_data_synchronous(30))
     assert encoder_intervals == (0, 0)
 
-    rover.set_motor_speeds(1, 1, 1)
-    time.sleep(0.4)
+    rover.set_motor_speeds(0.2, 0.2, 0)
+    time.sleep(0.1)
+    encoder_intervals_2 = (rover.get_data_synchronous(28), rover.get_data_synchronous(30))
+    assert encoder_intervals_2[0] > 0
+    assert encoder_intervals_2[1] > 0
 
-    encoder_intervals = (rover.get_data_synchronous(28), rover.get_data_synchronous(30))
-    assert encoder_intervals == (0, 0)
+    time.sleep(1)
+    rover.set_motor_speeds(-0.2, -0.2, 0)
+    time.sleep(0.1)
+    encoder_intervals_2 = (rover.get_data_synchronous(28), rover.get_data_synchronous(30))
+    assert abs(encoder_intervals_2[0]) > 0
+    assert abs(encoder_intervals_2[1]) > 0
 
+
+def test_encoder_counts(rover):
+    enc_counts_1 = (rover.get_data_synchronous(14), rover.get_data_synchronous(16))
+    time.sleep(0.1)
+    enc_counts_2 = (rover.get_data_synchronous(14), rover.get_data_synchronous(16))
+    assert enc_counts_1 == enc_counts_2
+
+    rover.set_motor_speeds(0.2, 0.2, 0.2)
     rover.send_speed()
-    time.sleep(0.4)
+    time.sleep(0.1)
 
-    encoder_intervals = (rover.get_data_synchronous(28), rover.get_data_synchronous(30))
-    assert encoder_intervals != (0, 0)
+    enc_counts_3 = (rover.get_data_synchronous(14), rover.get_data_synchronous(16))
+
+    assert 0 < ((enc_counts_3[0] - enc_counts_2[0] + 2 ** 16) % (2 ** 16)) < 200
+
