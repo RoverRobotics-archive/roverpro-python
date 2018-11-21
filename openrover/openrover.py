@@ -82,17 +82,20 @@ class OpenRover:
     _latest_data = None
     _reader_thread = None
     _protocol = None
+    _port = None
 
-    def __init__(self):
+    def __init__(self, port=None):
         """An OpenRover object """
         self._motor_left = 0
         self._motor_right = 0
         self._motor_flipper = 0
         self._latest_data = dict()
+        self._port = port
 
-    def open(self, port=None, **serial_kwargs):
+    def open(self, **serial_kwargs):
+        port = self._port
         if port is None:
-            port = list_openrover_devices()[0]
+            port = find_openrover()
 
         kwargs = DEFAULT_SERIAL_KWARGS.copy()
         kwargs.update(serial_kwargs)
@@ -107,6 +110,15 @@ class OpenRover:
 
     def close(self):
         self._reader_thread.close()
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        # don't suppress any errors
+        return False
 
     def on_new_openrover_data(self, key, value):
         self._latest_data[key] = value
@@ -192,4 +204,6 @@ def find_openrover():
     try:
         return next(iterate_openrovers())
     except StopIteration:
-        raise OpenRoverException
+        pass
+
+    raise OpenRoverException
