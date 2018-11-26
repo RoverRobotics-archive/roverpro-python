@@ -1,29 +1,39 @@
 from dataclasses import dataclass
 import enum
 import typing
-from rx import Observable
+import asyncio
 
 from openrover import OpenRover
+from openrover_data import BatteryStatus
 
 
-class BatteryAlarmCondition(enum.Flag):
-    OVERCHARGED = enum.auto()
-    TERMINATE_CHARGE = enum.auto()
-    OVER_TEMP = enum.auto()
-    TERMINATE_DISCHARGE = enum.auto()
+async def battery_vitals_stream(rover, delay):
+    while True:
+        yield (BatteryVitals(
+            battery_id='',  # TODO
+            voltage=rover.get_data(24) / 58,
+            current=rover.get_data(42) / 34,
+            alarms=rover.get_data(52).alarms,
+        ), BatteryVitals(
+            battery_id='',  # TODO
+            voltage=rover.get_data(26) / 58,
+            current=rover.get_data(44) / 34,
+            alarms=rover.get_data(54).alarms,
+        ))
+        await asyncio.sleep(delay)
 
 
-class OpenRoverDataStream:
-    def __init__(self, rover: OpenRover):
+async def battery_metrics_stream(rover, delay):
+    pass  # TODO
 
 
-@dataclass
 class FirmwareStatics:
     build_version: str
 
+
+@dataclass
 class BatteryMetrics:
     battery_id: str
-    voltage: float
     temperature: float
     capacity_remaining: float
     initialized: bool
@@ -32,11 +42,14 @@ class BatteryMetrics:
     fully_charged: bool
     fully_discharged: bool
 
+
 @dataclass
 class BatteryVitals:
     battery_id: str
+    voltage: float
     current: float
-    alarm_flags: typing.Optional[BatteryAlarmCondition]
+    alarms: BatteryStatus
+
 
 class MotorFaultCondition(enum.Enum):
     # Low load current

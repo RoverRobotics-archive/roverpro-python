@@ -56,14 +56,19 @@ class DataFormatChargerState(DataFormat):
             return False
 
 
+class BatteryStatusAlarm(enum.Flag):
+    NONE = 0
+    OVERCHARGED = enum.auto()
+    TERMINATE_CHARGE = enum.auto()
+    OVER_TEMP = enum.auto()
+    TERMINATE_DISCHARGE = enum.auto()
+    REMAINING_CAPACITY = enum.auto()
+    REMAINING_TIME = enum.auto()
+
+
 @dataclass
 class BatteryStatus:
-    overcharged_alarm: bool
-    terminate_charge_alarm: bool
-    over_temp_alarm: bool
-    terminate_discharge_alarm: bool
-    remaining_capacity_alarm: bool
-    remaining_time_alarm: bool
+    alarms: BatteryStatusAlarm
     initialized: bool
     discharging: bool
     fully_charged: bool
@@ -79,13 +84,15 @@ class DataFormatBatteryStatus(DataFormat):
     def unpack(self, b: bytes):
         assert len(b) == 2
         as_int = int.from_bytes(b, byteorder='big', signed=False)
+        alarms = BatteryStatusAlarm.NONE
+        if as_int & 0x8000: alarms |= BatteryStatusAlarm.OVERCHARGED
+        if as_int & 0x4000: alarms |= BatteryStatusAlarm.TERMINATE_CHARGE
+        if as_int & 0x1000: alarms |= BatteryStatusAlarm.OVER_TEMP
+        if as_int & 0x0800: alarms |= BatteryStatusAlarm.TERMINATE_DISCHARGE
+        if as_int & 0x0200: alarms |= BatteryStatusAlarm.REMAINING_CAPACITY
+        if as_int & 0x0100: alarms |= BatteryStatusAlarm.REMAINING_TIME
         return BatteryStatus(
-            overcharged_alarm=bool(as_int & 0x8000),
-            terminate_charge_alarm=bool(as_int & 0x4000),
-            over_temp_alarm=bool(as_int & 0x1000),
-            terminate_discharge_alarm=bool(as_int & 0x0800),
-            remaining_capacity_alarm=bool(as_int & 0x0200),
-            remaining_time_alarm=bool(as_int & 0x0100),
+            alarms=alarms,
             initialized=bool(as_int & 0x0080),
             discharging=bool(as_int & 0x0040),
             fully_charged=bool(as_int & 0x0020),
