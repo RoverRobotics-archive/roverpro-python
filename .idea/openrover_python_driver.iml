@@ -12,11 +12,11 @@
       <excludeFolder url="file://$MODULE_DIR$/dist" />
       <excludeFolder url="file://$MODULE_DIR$/openrover.egg-info" />
     </content>
-    <orderEntry type="jdk" jdkName="Pipenv (openrover_python_driver)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.7 (openrover_python_driver-V8t8gIIm)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">
-    <option name="requirementsPath" value="" />
+    <option name="requirementsPath" value="$MODULE_DIR$/requirements.txt" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="renderExternalDocumentation" value="true" />
