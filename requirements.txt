@@ -1,3 +1,0 @@
--e .
-twine>=1.12
-pytest>=4
