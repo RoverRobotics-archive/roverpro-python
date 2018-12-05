@@ -24,6 +24,12 @@ def test_create():
     assert o is not None
 
 
+def test_recover_from_bad_data(rover):
+    rover._reader_thread.write(b'test' * 20)
+    time.sleep(0.1)
+    assert rover.get_data_synchronous(40) is not None
+
+
 def test_missing_device():
     o = OpenRover(port='missingdevice')
     with pytest.raises(serial.SerialException):

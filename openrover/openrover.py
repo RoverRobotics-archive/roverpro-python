@@ -5,7 +5,7 @@ from serial import Serial
 import serial.threaded
 from serial.tools import list_ports
 
-from .openrover_data import OPENROVER_DATA_ELEMENTS
+from openrover_data import OPENROVER_DATA_ELEMENTS
 
 DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, timeout=0.5, write_timeout=0.5, stopbits=1)
 
@@ -146,9 +146,11 @@ class OpenRover:
     def request_data(self, index):
         self.send_command(10, index)
 
-    def get_data_synchronous(self, index):
+    def get_data_synchronous(self, index, force_refresh=False):
+        if force_refresh:
+            self._latest_data[index] = None
         self.request_data(index)
-        sleep(0.05)
+        sleep(0.025)
         return self.get_data(index)
 
     def get_data(self, index):
@@ -163,15 +165,18 @@ def get_openrover_version(s: Serial):
     """Checks if the given device is an OpenRover device.
     If it is, returns the build number.
     Otherwise raises an OpenRoverException"""
-    _ = s.readall()
+    _ = s.read(10)
+
     s.write(bytes([253, 125, 125, 125, 10, 40, 85]))
     test_value = bytes([253, 40])
-    device_output = s.read_until(test_value)
+    device_output = s.read_until(test_value, 10)
+    if len(device_output) == 0:
+        raise OpenRoverException("Device did not respond")
     if device_output.endswith(test_value):
         version_bytes = s.read(3)
         return (version_bytes[0] << 8) + version_bytes[1]
     else:
-        raise OpenRoverException
+        raise OpenRoverException("Device responded with: %s", device_output)
 
 
 def iterate_openrovers():
@@ -188,8 +193,6 @@ def iterate_openrovers():
             try:
                 get_openrover_version(s)
                 is_openrover = True
-            except OpenRoverException:
-                pass
             finally:
                 s.close()
 
