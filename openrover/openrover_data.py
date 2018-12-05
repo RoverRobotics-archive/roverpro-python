@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import abc
 from dataclasses import dataclass
 import enum
@@ -109,8 +107,8 @@ class DataElement:
 
 elements = [
     DataElement(0, UINT16, 'PWR_TOTAL_CURRENT', 'total current from battery in units of .029 Amps'),
-    DataElement(2, UINT16, 'MOTOR_FB_RPM.left'), #NOT YET IMPLEMENTED
-    DataElement(4, UINT16, 'MOTOR_FB_RPM.right'), #NOT YET IMPLEMENTED
+    DataElement(2, UINT16, 'MOTOR_FB_RPM.left'),  # NOT YET IMPLEMENTED
+    DataElement(4, UINT16, 'MOTOR_FB_RPM.right'),  # NOT YET IMPLEMENTED
     DataElement(6, UINT16, 'FLIPPER_FB_POSITION.pot1', 'flipper position sensor 1. 0=15 degrees; 1024=330 degrees;'),
     DataElement(8, UINT16, 'FLIPPER_FB_POSITION.pot2', 'flipper position sensor 2. 0=15 degrees; 1024=330 degrees;'),
     DataElement(10, UINT16, 'MOTOR_FB_CURRENT_left', 'left motor current in units of 1/34 Amps'),

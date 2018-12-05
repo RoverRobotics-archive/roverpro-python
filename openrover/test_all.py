@@ -1,10 +1,7 @@
-from collections import Counter
 from math import isclose
 import time
-from typing import Iterable
 
 import pytest
-from pytest import xfail
 import serial
 import serial.tools.list_ports
 from openrover import OpenRover, iterate_openrovers, find_openrover
@@ -25,6 +22,12 @@ def test_list_openrover_devices():
 def test_create():
     o = OpenRover()
     assert o is not None
+
+
+def test_recover_from_bad_data(rover):
+    rover._reader_thread.write(b'test' * 20)
+    time.sleep(0.1)
+    assert rover.get_data_synchronous(40) is not None
 
 
 def test_missing_device():
