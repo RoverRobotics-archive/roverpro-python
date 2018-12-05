@@ -9,6 +9,8 @@ pytest = "*"
 
 [packages]
 openrover = {editable = true,path = "."}
+seaborn = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.7"
