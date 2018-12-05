@@ -21,4 +21,9 @@ To install releases from git:
 pip install git+https://github.com/RoverRobotics/openrover_python_driver
 ```
 
+To run all tests, first attach the rover via breakout cable then run:
+```
+py setup test
+```
+
 ![OpenRover Basic](https://docs.roverrobotics.com/1-manuals/0-cover-photos/1-open-rover-basic-getting-started-vga.jpg)

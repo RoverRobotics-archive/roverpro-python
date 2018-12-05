@@ -5,7 +5,7 @@ from serial import Serial
 import serial.threaded
 from serial.tools import list_ports
 
-from openrover_data import OPENROVER_DATA_ELEMENTS
+from .openrover_data import OPENROVER_DATA_ELEMENTS
 
 DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, timeout=0.5, write_timeout=0.5, stopbits=1)
 
