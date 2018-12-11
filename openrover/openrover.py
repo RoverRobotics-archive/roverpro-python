@@ -1,127 +1,93 @@
-from time import sleep
-from typing import Callable, Iterable, List
+import asyncio
+from asyncio import InvalidStateError, as_completed
+from concurrent.futures import Future
+from functools import partial
+import logging
+import queue
+from typing import MutableMapping, Optional, AsyncIterable, AsyncGenerator
 
 from serial import Serial
-import serial.threaded
 from serial.tools import list_ports
+import serial_asyncio
 
-from .openrover_data import OPENROVER_DATA_ELEMENTS
-
-DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, timeout=0.5, write_timeout=0.5, stopbits=1)
-
-
-class OpenRoverProtocol(serial.threaded.Protocol):
-    SERIAL_START_BYTE = 253
-    on_data_read: Callable[[str, int], None] = None
-    transport = None  #
-
-    @classmethod
-    def checksum(cls, values):
-        return 255 - sum(values) % 255
-
-    def __init__(self):
-        """Serial communication implementation details for OpenRover"""
-        self.buffer = bytearray()
-        self.transport = None
-        self.on_data_read = None
-
-    def connection_made(self, transport):
-        """Store transport"""
-        self.transport = transport
-
-    def connection_lost(self, exc):
-        pass
-
-    def data_received(self, data):
-        """Called with snippets received from the serial port.
-        Decodes the data and forwards it on """
-        self.buffer.extend(data)
-
-        while True:
-            #  ignore any data until we find the start byte
-            start_byte_index = self.buffer.find(bytearray([self.SERIAL_START_BYTE]))
-            self.buffer[:start_byte_index] = []
-
-            if len(self.buffer) < 5:
-                return
-
-            packet = bytearray(self.buffer[:5])
-            self.buffer[:5] = []
-
-            if packet[4] == self.checksum(packet[1:4]):
-                k = packet[1]
-                v = OPENROVER_DATA_ELEMENTS[k].data_format.unpack(packet[2:4])
-
-                on_data_read = self.on_data_read
-                if on_data_read is not None:
-                    on_data_read(k, v)
-            else:
-                pass  # packet is bad. ignore it
-
-    @classmethod
-    def encode_speed(cls, speed_as_float):
-        return int(round(speed_as_float * 125)) + 125
-
-    @classmethod
-    def encode_packet(cls, motor_left, motor_right, flipper, arg1, arg2):
-        payload = [cls.encode_speed(motor_left),
-                   cls.encode_speed(motor_right),
-                   cls.encode_speed(flipper),
-                   arg1,
-                   arg2]
-        return bytes([cls.SERIAL_START_BYTE] + payload + [cls.checksum(payload)])
-
-    def write(self, *args):
-        return self.transport.write(self.encode_packet(*args))
+from openrover.exceptions import OpenRoverException
+from protocol import OpenRoverPacketizer, SerialConnectionContext
 
 
 class OpenRover:
     _motor_left = 0
     _motor_right = 0
     _motor_flipper = 0
-    _latest_data = None
-    _reader_thread = None
-    _protocol = None
     _port = None
+    _next_data = None
+    _connection = None
+    _packetizer = None
 
     def __init__(self, port=None):
         """An OpenRover object """
+        self._loop = asyncio.get_event_loop()
         self._motor_left = 0
         self._motor_right = 0
         self._motor_flipper = 0
-        self._latest_data = dict()
         self._port = port
+        self._connection: Optional[SerialConnectionContext] = None
+        self._next_data: MutableMapping[int, Future] = dict()
 
-    def open(self, **serial_kwargs):
+    def open(self):
+        return asyncio.run(self.aopen())
+
+    async def aopen(self):
         port = self._port
         if port is None:
             port = find_openrover()
 
-        kwargs = DEFAULT_SERIAL_KWARGS.copy()
-        kwargs.update(serial_kwargs)
-        serial_device = serial.Serial(port, **kwargs)
-        if not get_openrover_version(serial_device):
+        self._connection = SerialConnectionContext(port, open_timeout=1)
+        reader, writer = await self._connection.aopen()
+        self._packetizer = OpenRoverPacketizer(reader, writer)
+
+        self._process_data_task = self._loop.create_task(self.process_data())
+        # self._process_data_task = asyncio.run(self.process_data())
+
+        version = None
+        for _ in range(3):
+            try:
+                version = await self.get_data(40)
+            except asyncio.TimeoutError:
+                pass
+            except Exception as e:
+                raise OpenRoverException('Failed to open Openrover') from e
+        if version is None:
             raise OpenRoverException('Device did not respond to a request for OpenRover version number. Is it an OpenRover? Is it powered on?', {'port': port})
-        self._reader_thread = serial.threaded.ReaderThread(serial_device, OpenRoverProtocol)
-        self._reader_thread.start()
-        self._reader_thread.connect()
-        self._protocol = self._reader_thread.protocol
-        self._protocol.on_data_read = self.on_new_openrover_data
+
+    async def process_data(self):
+        async for k, v in self._packetizer.read_many():
+            old_future = self._next_data.pop(k)
+            if old_future is None:
+                raise RuntimeWarning('value was not expected %s: %s', k, v)
+            else:
+                try:
+                    old_future.set_result(v)
+                except InvalidStateError:
+                    pass
+
+    async def consume_data(self, q):
+        while True:
+            key, value = await q.get()
+            self._next_data[key].set_result(value)
 
     def close(self):
-        self._reader_thread.close()
+        self._process_data_task.cancel()
+        self._connection.close()
 
     def __enter__(self):
-        self.open()
+        x = asyncio.ensure_future(self.aopen())
+        x.get_loop().run_until_complete(x)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
         # don't suppress any errors
         return False
-
-    def on_new_openrover_data(self, key, value):
-        self._latest_data[key] = value
 
     def set_motor_speeds(self, left, right, flipper):
         assert -1 <= left <= 1
@@ -132,7 +98,7 @@ class OpenRover:
         self._motor_flipper = flipper
 
     def send_command(self, arg1, arg2):
-        self._protocol.write(self._motor_left, self._motor_right, self._motor_flipper, arg1, arg2)
+        self._packetizer.write(self._motor_left, self._motor_right, self._motor_flipper, arg1, arg2)
 
     def send_speed(self):
         self.send_command(0, 0)
@@ -146,67 +112,68 @@ class OpenRover:
     def request_data(self, index):
         self.send_command(10, index)
 
-    def get_data_synchronous(self, index, force_refresh=False):
-        if force_refresh:
-            self._latest_data[index] = None
-        self.request_data(index)
-        sleep(0.025)
-        return self.get_data(index)
+    def get_data_synchronous(self, index):
+        with_timeout = asyncio.wait_for(self.get_data(index), 0.2)
+        asyncio.run(with_timeout)
+        return with_timeout.result()
 
-    def get_data(self, index):
-        return self._latest_data.get(index)
+    async def _timeout(self, delay):
+        await asyncio.sleep(delay)
+        raise asyncio.TimeoutError
 
+    async def get_data(self, index, timeout=0.5):
+        """Get the next value for the given data value."""
 
-class OpenRoverException(Exception):
-    pass
+        if timeout is not None:
+            timeout_handle = asyncio.create_task(self._timeout(timeout))
 
+        future = self._next_data.get(index)
+        if future is not None:
+            future.cancel()
 
-def get_openrover_version(s: Serial):
-    """Checks if the given device is an OpenRover device.
-    If it is, returns the build number.
-    Otherwise raises an OpenRoverException"""
-    _ = s.read(10)
-
-    s.write(bytes([253, 125, 125, 125, 10, 40, 85]))
-    test_value = bytes([253, 40])
-    device_output = s.read_until(test_value, 10)
-    if len(device_output) == 0:
-        raise OpenRoverException("Device did not respond")
-    if device_output.endswith(test_value):
-        version_bytes = s.read(3)
-        return (version_bytes[0] << 8) + version_bytes[1]
-    else:
-        raise OpenRoverException("Device responded with: %s", device_output)
+        future = asyncio.get_event_loop().create_future()
+        self._next_data[index] = future
+        self.send_command(10, index)
+        return await asyncio.wait_for(future, timeout)
 
 
-def iterate_openrovers():
+async def get_openrover_version(port):
+    async with SerialConnectionContext(port, 1) as (reader, writer):
+        p = OpenRoverPacketizer(reader, writer)
+        n_attempts = 3
+        for i in range(n_attempts):
+            p.write(0, 0, 0, 10, 40)
+            k, v = await p.read_one(1)
+            if k == 40:
+                return v
+        raise OpenRoverException(f'Did not respond to request for OpenRover version after {n_attempts} attempts')
+
+
+async def iterate_openrovers():
     """
     Returns a list of devices determined to be OpenRover devices.
     Throws a SerialException if candidate devices are busy
     """
-    for c in list_ports.comports():
-        is_openrover = False
-        port = c.device
 
-        if c.manufacturer == 'FTDI':
-            s = Serial(port, **DEFAULT_SERIAL_KWARGS)
+    for comport in list_ports.comports():
+        if comport.manufacturer == 'FTDI':
             try:
-                get_openrover_version(s)
-                is_openrover = True
-            finally:
-                s.close()
+                await get_openrover_version(comport.device)
+                yield comport.device
 
-        if is_openrover:
-            yield port
+            except OpenRoverException:
+                pass
 
 
-def find_openrover():
+async def find_openrover() -> str:
     """
     Find the first OpenRover device and return its port
     """
+
     try:
-        return next(iterate_openrovers())
+        async for x in iterate_openrovers():
+            return x
     except StopIteration:
         pass
 
-    raise OpenRoverException
+    raise OpenRoverException('No Rover device found')

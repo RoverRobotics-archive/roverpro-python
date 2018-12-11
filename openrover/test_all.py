@@ -1,11 +1,12 @@
+import asyncio
 from math import isclose
+import statistics
 import time
 
 import pytest
-import serial
-import serial.tools.list_ports
-from openrover import OpenRover, iterate_openrovers, find_openrover
-import statistics
+
+from openrover import OpenRover, OpenRoverException, iterate_openrovers,find_openrover
+from openrover_data import OpenRoverFirmwareVersion
 
 
 @pytest.fixture
@@ -13,33 +14,50 @@ def rover():
     with OpenRover() as o:
         yield o
 
-
 def test_list_openrover_devices():
     for s in iterate_openrovers():
         assert isinstance(s, str)
 
+def test_find_openrover():
+    rover = asyncio.run(find_openrover())
+    assert rover is not None
 
 def test_create():
     o = OpenRover()
     assert o is not None
 
 
-def test_recover_from_bad_data(rover):
-    rover._reader_thread.write(b'test' * 20)
-    time.sleep(0.1)
-    assert rover.get_data_synchronous(40) is not None
+@pytest.mark.asyncio
+async def test_get_version(rover):
+    assert await rover.get_data(40) is not None
+
+
+@pytest.mark.asyncio
+async def test_recover_from_bad_data(rover):
+    rover._connection.writer.write(b'test' * 20)
+    for i in range(3):
+        try:
+            result = await rover.get_data(40)
+            if result is not None:
+                return
+        except Exception as e:
+            pass
+    assert False
 
 
 def test_missing_device():
     o = OpenRover(port='missingdevice')
-    with pytest.raises(serial.SerialException):
+    with pytest.raises(OpenRoverException):
         o.open()
 
 
 def test_build_number(rover):
     build_no = rover.get_data_synchronous(40)
-    assert isinstance(build_no, int)
-    assert 40000 < build_no < 50000
+    assert build_no is not None
+    assert isinstance(build_no, OpenRoverFirmwareVersion)
+    assert 0 < build_no.major < 100
+    assert 0 < build_no.minor < 100
+    assert 0 < build_no.patch < 100
 
 
 def test_encoder_counts(rover):
@@ -109,6 +127,7 @@ def test_encoder_intervals_forward(rover):
         enc_intervals_left.append(rover.get_data_synchronous(28))
         enc_intervals_right.append(rover.get_data_synchronous(30))
 
+    # note this test may fail if the rover wheels have any significant resistance, since this may cause the motors to "kick" backwards
     assert strictly_increasing(enc_counts_left)
     assert strictly_increasing(enc_counts_right)
 
@@ -139,6 +158,7 @@ def test_encoder_intervals_backward(rover):
         enc_intervals_left.append(rover.get_data_synchronous(28))
         enc_intervals_right.append(rover.get_data_synchronous(30))
 
+    # note this test may fail if the rover wheels have any significant resistance, since this may cause the motors to "kick" backwards
     assert strictly_decreasing(enc_counts_left)
     assert strictly_decreasing(enc_counts_right)
 

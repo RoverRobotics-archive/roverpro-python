@@ -3,17 +3,19 @@ from dataclasses import dataclass
 import struct
 import typing
 
+from exceptions import OpenRoverException
 
-class DataFormat(abc.ABC):
-    python_type: typing.Type
 
-    @abc.abstractmethod
-    def unpack(self, b):
-        pass
+class ReadDataFormat(abc.ABC):
+    python_type: typing.Type = None
 
-    @abc.abstractmethod
     def pack(self, value):
-        pass
+        raise NotImplementedError
+
+
+class DataFormat(ReadDataFormat):
+    def unpack(self, b):
+        raise NotImplementedError
 
 
 class StructDataFormat(DataFormat):
@@ -28,6 +30,44 @@ class StructDataFormat(DataFormat):
         return self._struct.unpack(b)[0]
 
 
+OPENROVER_LEGACY_VERSION = 16421
+
+
+@dataclass
+class OpenRoverFirmwareVersion:
+    value: int
+
+    def __post_init__(self):
+        if self.value == 0:
+            raise OpenRoverException('invalid version number %s', self.value)
+
+    @property
+    def major(self):
+        if self.value == OPENROVER_LEGACY_VERSION:
+            return 0
+        return self.value // 10000
+
+    @property
+    def minor(self):
+        if self.value == OPENROVER_LEGACY_VERSION:
+            return 0
+        return self.value % 100 // 100
+
+    @property
+    def patch(self):
+        if self.value == OPENROVER_LEGACY_VERSION:
+            return 0
+        return self.value % 10
+
+
+class DataFormatFirmwareVersion(ReadDataFormat):
+    python_type = OpenRoverFirmwareVersion
+
+    def unpack(self, b):
+        v, = struct.Struct('!H').unpack(b)
+        return OpenRoverFirmwareVersion(v)
+
+
 class DataFormatInt16(StructDataFormat):
     python_type = int
     _struct = struct.Struct('!h')
@@ -39,19 +79,18 @@ class DataFormatUInt16(StructDataFormat):
 
 
 class DataFormatChargerState(DataFormat):
+    CHARGER_ACTIVE_MAGIC_BYTES = bytes.fromhex('dada')
+    CHARGER_INACTIVE_MAGICS_BYTES = bytes.fromhex('0000')
     python_type = bool
 
     def pack(self, value):
         if value:
-            return bytes.fromhex('dada')
+            return self.CHARGER_ACTIVE_MAGIC_BYTES
         else:
-            return bytes.fromhex('0000')
+            return self.CHARGER_INACTIVE_MAGICS_BYTES
 
     def unpack(self, b):
-        if bytes(b) == bytes.fromhex('dada'):
-            return True
-        else:
-            return False
+        return (bytes(b) == self.CHARGER_ACTIVE_MAGIC_BYTES)
 
 
 @dataclass
@@ -124,7 +163,7 @@ elements = [
     DataElement(34, UINT16, 'ROBOT_REL_SOC_A', 'Percentage charge of battery A'),
     DataElement(36, UINT16, 'ROBOT_REL_SOC_B', 'Percentage charge of battery B'),
     DataElement(38, DataFormatChargerState(), 'ROBOT_MOTOR_CHARGER_STATE', 'is battery charging?'),
-    DataElement(40, UINT16, 'BUILD_NUMBER'),
+    DataElement(40, DataFormatFirmwareVersion(), 'BUILD_NUMBER'),
     DataElement(42, UINT16, 'PWR_A_CURRENT'),
     DataElement(44, UINT16, 'PWR_B_CURRENT'),
     DataElement(46, UINT16, 'MOTOR_FLIPPER_ANGLE'),
