@@ -5,20 +5,24 @@ from enum import Enum
 import struct
 import typing
 
-
-class DataFormat(abc.ABC):
-    python_type: typing.Type
-
-    @abc.abstractmethod
-    def unpack(self, b):
-        pass
-
-    @abc.abstractmethod
-    def pack(self, value):
-        pass
+from openrover.util import OpenRoverException
 
 
-class StructDataFormat(DataFormat):
+class ReadDataFormat(abc.ABC):
+    python_type: typing.Type = None
+
+    def unpack(self, b: bytes):
+        raise NotImplementedError
+
+
+class WriteDataFormat(abc.ABC):
+    python_type: typing.Type = None
+
+    def pack(self, value) -> bytes:
+        raise NotImplementedError
+
+
+class StructDataFormat(ReadDataFormat, WriteDataFormat):
     def __init__(self, format_: str, python_type):
         self.python_type = python_type
         self._struct = struct.Struct(format_)
@@ -30,30 +34,66 @@ class StructDataFormat(DataFormat):
         return self._struct.unpack(b)[0]
 
 
-class DataFormatInt16(StructDataFormat):
-    python_type = int
-    _struct = struct.Struct('!h')
+OPENROVER_LEGACY_VERSION = 16421
 
 
-class DataFormatUInt16(StructDataFormat):
-    python_type = int
-    _struct = struct.Struct('!H')
+@dataclass
+class OpenRoverFirmwareVersion:
+    value: int
+
+    def __post_init__(self):
+        if self.value == 0:
+            raise OpenRoverException('invalid version number %s', self.value)
+
+    @property
+    def major(self):
+        if self.value == OPENROVER_LEGACY_VERSION:
+            return 0
+        return self.value // 10000
+
+    @property
+    def minor(self):
+        if self.value == OPENROVER_LEGACY_VERSION:
+            return 0
+        return self.value % 100 // 100
+
+    @property
+    def patch(self):
+        if self.value == OPENROVER_LEGACY_VERSION:
+            return 0
+        return self.value % 10
 
 
-class DataFormatChargerState(DataFormat):
+class DataFormatFirmwareVersion(ReadDataFormat):
+    python_type = OpenRoverFirmwareVersion
+
+    def unpack(self, b):
+        v, = struct.Struct('!H').unpack(b)
+        return OpenRoverFirmwareVersion(v)
+
+
+class DataFormatMotorEffort(WriteDataFormat):
+    python_type = float
+
+    def pack(self, value):
+        assert -1 < value < 1
+        b = struct.Struct('!B').pack(int(round(value * 125)) + 125)
+        return b
+
+
+class DataFormatChargerState(ReadDataFormat, WriteDataFormat):
+    CHARGER_ACTIVE_MAGIC_BYTES = bytes.fromhex('dada')
+    CHARGER_INACTIVE_MAGICS_BYTES = bytes.fromhex('0000')
     python_type = bool
 
     def pack(self, value):
         if value:
-            return bytes.fromhex('dada')
+            return self.CHARGER_ACTIVE_MAGIC_BYTES
         else:
-            return bytes.fromhex('0000')
+            return self.CHARGER_INACTIVE_MAGICS_BYTES
 
     def unpack(self, b):
-        if bytes(b) == bytes.fromhex('dada'):
-            return True
-        else:
-            return False
+        return (bytes(b) == self.CHARGER_ACTIVE_MAGIC_BYTES)
 
 
 @dataclass
@@ -70,11 +110,8 @@ class BatteryStatus:
     fully_discharged: bool
 
 
-class DataFormatBatteryStatus(DataFormat):
+class DataFormatBatteryStatus(ReadDataFormat):
     python_type = BatteryStatus
-
-    def pack(self, value):
-        raise NotImplementedError
 
     def unpack(self, b: bytes):
         assert len(b) == 2
@@ -95,12 +132,13 @@ class DataFormatBatteryStatus(DataFormat):
 
 UINT16 = StructDataFormat('!H', int)
 INT16 = StructDataFormat('!h', int)
+UINT8 = StructDataFormat('!B', int)
 
 
 @dataclass
 class DataElement:
     index: int
-    data_format: DataFormat
+    data_format: ReadDataFormat
     name: str
     description: str = None
 
@@ -126,7 +164,7 @@ elements = [
     DataElement(34, UINT16, 'ROBOT_REL_SOC_A', 'Percentage charge of battery A'),
     DataElement(36, UINT16, 'ROBOT_REL_SOC_B', 'Percentage charge of battery B'),
     DataElement(38, DataFormatChargerState(), 'ROBOT_MOTOR_CHARGER_STATE', 'is battery charging?'),
-    DataElement(40, UINT16, 'BUILD_NUMBER'),
+    DataElement(40, DataFormatFirmwareVersion(), 'BUILD_NUMBER'),
     DataElement(42, UINT16, 'PWR_A_CURRENT'),
     DataElement(44, UINT16, 'PWR_B_CURRENT'),
     DataElement(46, UINT16, 'MOTOR_FLIPPER_ANGLE'),

@@ -1,4 +1,4 @@
-from openrover.openrover import OpenRover, iterate_openrovers, find_openrover, OpenRoverException
+from openrover.rover import OpenRover, iterate_openrovers, find_openrover, OpenRoverException
 
 name = 'openrover'
 

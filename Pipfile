@@ -5,12 +5,10 @@ verify_ssl = true
 
 [dev-packages]
 twine = "*"
-pytest = "*"
 
 [packages]
 openrover = {editable = true,path = "."}
 observable = "*"
 
 [requires]
-python_version = "3.7"
-# python_version = "3.6"
+python_version = "3.6"
