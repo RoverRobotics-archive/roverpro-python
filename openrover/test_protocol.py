@@ -1,16 +1,15 @@
 import asyncio
 
-import pytest
-
 from openrover import find_openrover
 from openrover_data import OpenRoverFirmwareVersion
 from protocol import OpenRoverPacketizer, SerialConnectionContext
+from unasync_decorator import unasync
 
-port = find_openrover()
+port = asyncio.get_event_loop().run_until_complete(find_openrover())
 n = 1000
 
 
-@pytest.mark.asyncio
+@unasync
 async def test_packetizer_read_write_immediate():
     n_received = 0
 
@@ -31,7 +30,7 @@ async def test_packetizer_read_write_immediate():
     assert 0.9 < n_received / n <= 1
 
 
-@pytest.mark.asyncio
+@unasync
 async def test_packetizer_writes_then_reads():
     n_received = 0
 
@@ -70,13 +69,13 @@ async def read_packets(packetizer):
     return n_received
 
 
-@pytest.mark.asyncio
+@unasync
 async def test_packetizer_write_read_full_async():
     async with SerialConnectionContext(port) as (reader, writer):
         packetizer = OpenRoverPacketizer(reader, writer)
 
-        write_packets_task = asyncio.create_task(write_packets(packetizer))
-        read_packets_task = asyncio.create_task(read_packets(packetizer))
+        write_packets_task = asyncio.ensure_future(write_packets(packetizer))
+        read_packets_task = asyncio.ensure_future(read_packets(packetizer))
 
         await asyncio.gather(read_packets_task, write_packets_task)
         n_received = read_packets_task.result()

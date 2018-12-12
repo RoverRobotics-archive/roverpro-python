@@ -5,27 +5,20 @@ from typing import Any, AsyncContextManager, AsyncIterable, Dict, Optional, Tupl
 from serial import SerialException
 import serial_asyncio
 
-from openrover.exceptions import OpenRoverException
-from openrover_data import OPENROVER_DATA_ELEMENTS
+import async_iterable_util
+from openrover.util import OpenRoverException
+from openrover_data import OPENROVER_DATA_ELEMENTS, DataFormatMotorEffort, UINT8
 
 SERIAL_START_BYTE = bytes([253])
 
 
-def encode_packet(motor_left, motor_right, flipper, arg1, arg2):
-    payload = [encode_speed(motor_left),
-               encode_speed(motor_right),
-               encode_speed(flipper),
-               arg1,
-               arg2]
-    return SERIAL_START_BYTE + bytes(payload + [checksum(payload)])
+def encode_packet(*args: bytes):
+    payload = b''.join(args)
+    return SERIAL_START_BYTE + payload + bytes([checksum(payload)])
 
 
 def checksum(values):
     return 255 - sum(values) % 255
-
-
-def encode_speed(speed_as_float):
-    return int(round(speed_as_float * 125)) + 125
 
 
 _device_locks = dict()
@@ -64,21 +57,27 @@ class SerialConnectionContext(AsyncContextManager):
             serial_kwargs.update(self.serial_kwargs)
 
             stream_wrappers = await serial_asyncio.open_serial_connection(url=self._port, **serial_kwargs)
+            self._stream_wrappers = stream_wrappers
+            return stream_wrappers
+
         except SerialException as e:
             if 'FileNotFoundError' in e.args[0]:
                 raise OpenRoverException("OpenRover device not found. Is it connected?", self._port) from e
-            pass
-
-            raise OpenRoverException("Could not open device") from e
-
-        self._stream_wrappers = stream_wrappers
-        return stream_wrappers
+            raise OpenRoverException("Could not open device", self._port) from e
+        except Exception as e:
+            raise OpenRoverException("Could not open device", self._port) from e
 
     async def aclose(self):
         r, w = self._stream_wrappers
         del self._stream_wrappers
         w.close()
-        await w.wait_closed()
+
+        try:
+            await r.wait_closed()  # only available in 3.7
+        except AttributeError:
+            while not r.at_eof():
+                await asyncio.sleep(0.001)
+
         self._device_lock.release()
 
     async def __aenter__(self):
@@ -88,61 +87,20 @@ class SerialConnectionContext(AsyncContextManager):
         await self.aclose()
 
 
-async def aiterable_item_timeout(delay: float, aiterable: AsyncIterable):
-    assert delay >= 0
-    iter = aiterable.__aiter__()
-    try:
-        while True:
-            item = await asyncio.wait_for(asyncio.create_task(iter.__anext__()), delay)
-            yield item
-    except asyncio.TimeoutError:
-        pass
-    except StopAsyncIteration:
-        raise
-
-
-async def aiterable_limit(limit: int, aiterable: AsyncIterable):
-    assert limit >= 0
-    iter = aiterable.__aiter__()
-    try:
-        for i in range(limit):
-            yield await iter.__anext__()
-    except StopAsyncIteration:
-        raise
-
-
-async def aiterable_sequence_timeout(delay: float, aiterable: AsyncIterable):
-    assert delay >= 0
-    iter = aiterable.__aiter__()
-    sleep_task = asyncio.create_task(asyncio.sleep(delay))
-    try:
-        while True:
-            next_task = asyncio.create_task(iter.__anext__())
-            await asyncio.wait([sleep_task, next_task], return_when=asyncio.FIRST_COMPLETED)
-            if next_task.done():
-                yield next_task.result()
-            if sleep_task.done():
-                next_task.cancel()
-                return
-    except StopAsyncIteration:
-        sleep_task.cancel()
-        raise
-
-
 class OpenRoverPacketizer():
     def __init__(self, reader, writer):
         """Serial communication implementation details for OpenRover"""
         self._reader: StreamReader = reader
         self._writer: StreamWriter = writer
 
-    def read_many(self, limit: Optional[int] = None, sequence_timeout: Optional[float] = None, item_timeout: Optional[float] = None):
+    def read_many(self, n: Optional[int] = None, sequence_timeout: Optional[float] = None, item_timeout: Optional[float] = None):
         result = self.read_all()
         if sequence_timeout is not None:
-            result = aiterable_sequence_timeout(sequence_timeout, result)
-        if limit is not None:
-            result = aiterable_limit(limit, result)
+            result = async_iterable_util.timeout_all(sequence_timeout, result)
+        if n is not None:
+            result = async_iterable_util.limit(n, result)
         if item_timeout is not None:
-            result = aiterable_item_timeout(item_timeout, result)
+            result = async_iterable_util.timeout_each(item_timeout, result)
         return result
 
     async def read_all(self):
@@ -167,7 +125,13 @@ class OpenRoverPacketizer():
         async for args in messages:
             self.write(*args)
 
-    def write(self, *args):
+    def write(self, motor_left, motor_right, flipper, arg1, arg2):
         """Arrange to have the data written"""
-        binary = encode_packet(*args)
+        motor_speed_format = DataFormatMotorEffort()
+        uint_8_format = UINT8
+        binary = encode_packet(motor_speed_format.pack(motor_left),
+                               motor_speed_format.pack(motor_right),
+                               motor_speed_format.pack(flipper),
+                               bytes([arg1]),
+                               bytes([arg2]))
         self._writer.write(binary)

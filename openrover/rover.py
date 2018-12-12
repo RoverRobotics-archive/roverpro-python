@@ -1,16 +1,11 @@
 import asyncio
-from asyncio import InvalidStateError, as_completed
+from asyncio import InvalidStateError
 from concurrent.futures import Future
-from functools import partial
-import logging
-import queue
-from typing import MutableMapping, Optional, AsyncIterable, AsyncGenerator
+from typing import MutableMapping, Optional
 
-from serial import Serial
 from serial.tools import list_ports
-import serial_asyncio
 
-from openrover.exceptions import OpenRoverException
+from openrover.util import OpenRoverException
 from protocol import OpenRoverPacketizer, SerialConnectionContext
 
 
@@ -33,35 +28,38 @@ class OpenRover:
         self._connection: Optional[SerialConnectionContext] = None
         self._next_data: MutableMapping[int, Future] = dict()
 
-    def open(self):
-        return asyncio.run(self.aopen())
-
     async def aopen(self):
         port = self._port
         if port is None:
-            port = find_openrover()
+            port = await find_openrover()
 
         self._connection = SerialConnectionContext(port, open_timeout=1)
         reader, writer = await self._connection.aopen()
         self._packetizer = OpenRoverPacketizer(reader, writer)
 
-        self._process_data_task = self._loop.create_task(self.process_data())
-        # self._process_data_task = asyncio.run(self.process_data())
+        self._process_data_task = asyncio.ensure_future(self.process_data())
 
         version = None
         for _ in range(3):
             try:
-                version = await self.get_data(40)
-            except asyncio.TimeoutError:
-                pass
+                version = await self.get_data(40, timeout=1)
+                if version is not None:
+                    break
             except Exception as e:
                 raise OpenRoverException('Failed to open Openrover') from e
         if version is None:
             raise OpenRoverException('Device did not respond to a request for OpenRover version number. Is it an OpenRover? Is it powered on?', {'port': port})
 
+    async def __aenter__(self):
+        await self.aopen()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.aclose()
+
     async def process_data(self):
         async for k, v in self._packetizer.read_many():
-            old_future = self._next_data.pop(k)
+            old_future = self._next_data.pop(k, None)
             if old_future is None:
                 raise RuntimeWarning('value was not expected %s: %s', k, v)
             else:
@@ -75,19 +73,9 @@ class OpenRover:
             key, value = await q.get()
             self._next_data[key].set_result(value)
 
-    def close(self):
+    async def aclose(self):
         self._process_data_task.cancel()
-        self._connection.close()
-
-    def __enter__(self):
-        x = asyncio.ensure_future(self.aopen())
-        x.get_loop().run_until_complete(x)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-        # don't suppress any errors
-        return False
+        return await self._connection.aclose()
 
     def set_motor_speeds(self, left, right, flipper):
         assert -1 <= left <= 1
@@ -112,21 +100,8 @@ class OpenRover:
     def request_data(self, index):
         self.send_command(10, index)
 
-    def get_data_synchronous(self, index):
-        with_timeout = asyncio.wait_for(self.get_data(index), 0.2)
-        asyncio.run(with_timeout)
-        return with_timeout.result()
-
-    async def _timeout(self, delay):
-        await asyncio.sleep(delay)
-        raise asyncio.TimeoutError
-
-    async def get_data(self, index, timeout=0.5):
+    async def get_data(self, index, timeout: float = 0.2):
         """Get the next value for the given data value."""
-
-        if timeout is not None:
-            timeout_handle = asyncio.create_task(self._timeout(timeout))
-
         future = self._next_data.get(index)
         if future is not None:
             future.cancel()
@@ -134,7 +109,8 @@ class OpenRover:
         future = asyncio.get_event_loop().create_future()
         self._next_data[index] = future
         self.send_command(10, index)
-        return await asyncio.wait_for(future, timeout)
+        result = await asyncio.wait_for(future, timeout)
+        return result
 
 
 async def get_openrover_version(port):
@@ -151,7 +127,7 @@ async def get_openrover_version(port):
 
 async def iterate_openrovers():
     """
-    Returns a list of devices determined to be OpenRover devices.
+    Iterates devices determined to be OpenRover devices.
     Throws a SerialException if candidate devices are busy
     """
 
@@ -165,14 +141,10 @@ async def iterate_openrovers():
                 pass
 
 
-async def find_openrover() -> str:
-    """
-    Find the first OpenRover device and return its port
-    """
-
+async def find_openrover():
     try:
-        async for x in iterate_openrovers():
-            return x
+        async for i in iterate_openrovers():
+            return i
     except StopIteration:
         pass
 

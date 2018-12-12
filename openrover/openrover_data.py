@@ -3,22 +3,24 @@ from dataclasses import dataclass
 import struct
 import typing
 
-from exceptions import OpenRoverException
+from openrover.util import OpenRoverException
 
 
 class ReadDataFormat(abc.ABC):
     python_type: typing.Type = None
 
-    def pack(self, value):
+    def unpack(self, b: bytes):
         raise NotImplementedError
 
 
-class DataFormat(ReadDataFormat):
-    def unpack(self, b):
+class WriteDataFormat(abc.ABC):
+    python_type: typing.Type = None
+
+    def pack(self, value) -> bytes:
         raise NotImplementedError
 
 
-class StructDataFormat(DataFormat):
+class StructDataFormat(ReadDataFormat, WriteDataFormat):
     def __init__(self, format_: str, python_type):
         self.python_type = python_type
         self._struct = struct.Struct(format_)
@@ -68,17 +70,16 @@ class DataFormatFirmwareVersion(ReadDataFormat):
         return OpenRoverFirmwareVersion(v)
 
 
-class DataFormatInt16(StructDataFormat):
-    python_type = int
-    _struct = struct.Struct('!h')
+class DataFormatMotorEffort(WriteDataFormat):
+    python_type = float
+
+    def pack(self, value):
+        assert -1 < value < 1
+        b = struct.Struct('!B').pack(int(round(value * 125)) + 125)
+        return b
 
 
-class DataFormatUInt16(StructDataFormat):
-    python_type = int
-    _struct = struct.Struct('!H')
-
-
-class DataFormatChargerState(DataFormat):
+class DataFormatChargerState(ReadDataFormat, WriteDataFormat):
     CHARGER_ACTIVE_MAGIC_BYTES = bytes.fromhex('dada')
     CHARGER_INACTIVE_MAGICS_BYTES = bytes.fromhex('0000')
     python_type = bool
@@ -107,11 +108,8 @@ class BatteryStatus:
     fully_discharged: bool
 
 
-class DataFormatBatteryStatus(DataFormat):
+class DataFormatBatteryStatus(ReadDataFormat):
     python_type = BatteryStatus
-
-    def pack(self, value):
-        raise NotImplementedError
 
     def unpack(self, b: bytes):
         assert len(b) == 2
@@ -132,12 +130,13 @@ class DataFormatBatteryStatus(DataFormat):
 
 UINT16 = StructDataFormat('!H', int)
 INT16 = StructDataFormat('!h', int)
+UINT8 = StructDataFormat('!B', int)
 
 
 @dataclass
 class DataElement:
     index: int
-    data_format: DataFormat
+    data_format: ReadDataFormat
     name: str
     description: str = None
 
