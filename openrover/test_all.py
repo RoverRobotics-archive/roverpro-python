@@ -69,7 +69,6 @@ async def test_missing_device():
         except Exception as e:
             raise
 
-
 @unasync
 async def test_build_number():
     async with OpenRover() as rover:
