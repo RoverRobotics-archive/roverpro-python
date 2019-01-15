@@ -1,20 +1,15 @@
 import asyncio
-from functools import wraps
-from typing import Awaitable, AsyncIterable, Generator
-
-from math import isclose
 import statistics
 import time
 
+from math import isclose
 import pytest
 
-from openrover import OpenRover, OpenRoverException, iterate_openrovers, find_openrover
+from openrover import OpenRover, OpenRoverException, find_openrover, iterate_openrovers
 from openrover_data import OpenRoverFirmwareVersion
 from unasync_decorator import unasync
 
 loop = asyncio.get_event_loop()
-
-import inspect
 
 
 @pytest.fixture
@@ -68,6 +63,7 @@ async def test_missing_device():
             await rover.aopen()
         except Exception as e:
             raise
+
 
 @unasync
 async def test_build_number():

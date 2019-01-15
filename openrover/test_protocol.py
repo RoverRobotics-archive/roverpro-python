@@ -1,4 +1,7 @@
 import asyncio
+from asyncio import ensure_future
+
+import pytest
 
 from openrover import find_openrover
 from openrover_data import OpenRoverFirmwareVersion
@@ -6,7 +9,13 @@ from protocol import OpenRoverPacketizer, SerialConnectionContext
 from unasync_decorator import unasync
 
 port = asyncio.get_event_loop().run_until_complete(find_openrover())
-n = 1000
+n = 2000
+
+@unasync
+async def test_reset():
+    async with SerialConnectionContext(port) as (reader, writer):
+        packetizer = OpenRoverPacketizer(reader, writer)
+        packetizer.write(0, 0, 0, 230, 0)
 
 
 @unasync
@@ -28,6 +37,31 @@ async def test_packetizer_read_write_immediate():
                 pass
     print(f'success ratio {n_received / n}')
     assert 0.9 < n_received / n <= 1
+
+
+@unasync
+async def test_simultaneous_get():
+    # check that if we try to get multiple values at the same time, it throws an exception
+    async with SerialConnectionContext(port) as (reader, writer):
+        packetizer = OpenRoverPacketizer(reader, writer)
+        packetizer.write(0, 0, 0, 10, 40)
+        # packetizer.write(0, 0, 0, 10, 40)
+        t1 = ensure_future(packetizer.read_one(0.2))
+        t2 = ensure_future(packetizer.read_one(0.2))
+        k, v = await t1
+        assert k == 40
+        assert isinstance(v, OpenRoverFirmwareVersion)
+        with pytest.raises(RuntimeError):
+            await t2
+
+
+@unasync
+async def test_timeout():
+    async with SerialConnectionContext(port) as (reader, writer):
+        packetizer = OpenRoverPacketizer(reader, writer)
+        t1 = ensure_future(packetizer.read_one(0.2))
+        with pytest.raises(asyncio.TimeoutError):
+            await t1
 
 
 @unasync

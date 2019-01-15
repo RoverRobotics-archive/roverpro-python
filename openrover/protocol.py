@@ -107,7 +107,7 @@ class OpenRoverPacketizer():
         while True:
             yield await self._read()
 
-    async def read_one(self, timeout: Optional[int]):
+    async def read_one(self, timeout: Optional[float]):
         return await asyncio.wait_for(self._read(), timeout)
 
     async def _read(self) -> Tuple[int, bytes]:
@@ -128,7 +128,6 @@ class OpenRoverPacketizer():
     def write(self, motor_left, motor_right, flipper, arg1, arg2):
         """Arrange to have the data written"""
         motor_speed_format = DataFormatMotorEffort()
-        uint_8_format = UINT8
         binary = encode_packet(motor_speed_format.pack(motor_left),
                                motor_speed_format.pack(motor_right),
                                motor_speed_format.pack(flipper),
