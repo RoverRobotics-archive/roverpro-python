@@ -53,7 +53,7 @@ class OpenRoverFirmwareVersion:
     def minor(self):
         if self.value == OPENROVER_LEGACY_VERSION:
             return 0
-        return self.value % 100 // 100
+        return self.value // 100 % 100
 
     @property
     def patch(self):

@@ -1,12 +1,13 @@
 import asyncio
 from asyncio import InvalidStateError
 from concurrent.futures import Future
-from typing import MutableMapping, Optional
+import logging
+from typing import MutableMapping, Optional, Iterable, Tuple, Dict, Any
 
 from serial.tools import list_ports
 
 from openrover.util import OpenRoverException
-from protocol import OpenRoverPacketizer, SerialConnectionContext
+from protocol import OpenRoverConnectionContext
 
 
 class OpenRover:
@@ -25,7 +26,6 @@ class OpenRover:
         self._motor_right = 0
         self._motor_flipper = 0
         self._port = port
-        self._connection: Optional[SerialConnectionContext] = None
         self._next_data: MutableMapping[int, Future] = dict()
 
     async def aopen(self):
@@ -33,9 +33,8 @@ class OpenRover:
         if port is None:
             port = await find_openrover()
 
-        self._connection = SerialConnectionContext(port, open_timeout=1)
-        reader, writer = await self._connection.aopen()
-        self._packetizer = OpenRoverPacketizer(reader, writer)
+        self._connection = OpenRoverConnectionContext(port, open_timeout=1)
+        self._packetizer = await self._connection.aopen()
 
         self._process_data_task = asyncio.ensure_future(self.process_data())
 
@@ -112,17 +111,28 @@ class OpenRover:
         result = await asyncio.wait_for(future, timeout)
         return result
 
+    async def get_data_items(self, indices: Iterable[int]) -> Dict[int, Any]:
+        keys = list(set(indices))
+        futures = []
+        for i in keys:
+            old_future = self._next_data.get(i)
+            if old_future is not None:
+                old_future.cancel()
+            f = asyncio.get_event_loop().create_future()
+            self._next_data[i] = f
+            self.request_data(i)
+            futures.append(f)
+        values = await asyncio.wait_for(asyncio.gather(*futures), timeout=0.2)
+        return dict(zip(keys, values))
+
 
 async def get_openrover_version(port):
-    async with SerialConnectionContext(port, 1) as (reader, writer):
-        p = OpenRoverPacketizer(reader, writer)
-        n_attempts = 3
-        for i in range(n_attempts):
-            p.write(0, 0, 0, 10, 40)
-            k, v = await p.read_one(1)
-            if k == 40:
-                return v
-        raise OpenRoverException(f'Did not respond to request for OpenRover version after {n_attempts} attempts')
+    async with OpenRoverConnectionContext(port, 1) as proto:
+        proto.write(0, 0, 0, 10, 40)
+        k, v = await proto.read_one(1)
+        if k == 40:
+            return v
+        raise OpenRoverException(f'Did not respond to request for OpenRover version')
 
 
 async def iterate_openrovers():
@@ -130,15 +140,14 @@ async def iterate_openrovers():
     Iterates devices determined to be OpenRover devices.
     Throws a SerialException if candidate devices are busy
     """
-
     for comport in list_ports.comports():
         if comport.manufacturer == 'FTDI':
             try:
                 await get_openrover_version(comport.device)
                 yield comport.device
 
-            except OpenRoverException:
-                pass
+            except OpenRoverException as e:
+                logging.warning(f'Could not get OpenRover version of device {comport}:{e}')
 
 
 async def find_openrover():

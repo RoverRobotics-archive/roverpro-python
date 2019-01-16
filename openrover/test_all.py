@@ -44,7 +44,7 @@ async def test_get_version(rover):
 
 @unasync
 async def test_recover_from_bad_data(rover):
-    rover._connection.writer.write(b'test' * 20)
+    rover._connection._transport.write(b'test' * 20)
     for i in range(3):
         try:
             result = await rover.get_data(40)
@@ -74,18 +74,6 @@ async def test_build_number():
         assert 0 <= build_no.major < 100
         assert 0 <= build_no.minor < 100
         assert 0 <= build_no.patch < 100
-
-
-def test_build_number2(rover):
-    async def foo():
-        build_no = await rover.get_data(40)
-        assert build_no is not None
-        assert isinstance(build_no, OpenRoverFirmwareVersion)
-        assert 0 <= build_no.major < 100
-        assert 0 <= build_no.minor < 100
-        assert 0 <= build_no.patch < 100
-
-    asyncio.get_event_loop().run_until_complete(foo())
 
 
 @unasync
@@ -189,10 +177,11 @@ async def test_encoder_intervals_backward(rover):
     for i in range(20):
         rover.send_speed()
         await asyncio.sleep(0.1)
-        enc_counts_left.append(await rover.get_data(14))
-        enc_counts_right.append(await rover.get_data(16))
-        enc_intervals_left.append(await rover.get_data(28))
-        enc_intervals_right.append(await rover.get_data(30))
+        data = await rover.get_data_items([14,16,28,30])
+        enc_counts_left.append(data[14])
+        enc_counts_right.append(data[16])
+        enc_intervals_left.append(data[28])
+        enc_intervals_right.append(data[30])
 
     # note this test may fail if the rover wheels have any significant resistance, since this may cause the motors to "kick" backwards
     assert strictly_decreasing(enc_counts_left)
