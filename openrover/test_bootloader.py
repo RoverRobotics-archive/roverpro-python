@@ -8,8 +8,9 @@ import warnings
 import pytest
 from serial.tools import list_ports
 
+from connection import OpenRoverConnection
 from openrover import OpenRover
-from protocol import OpenRoverProtocol, OpenRoverConnectionContext
+from openrover_protocol import OpenRoverProtocol
 from unasync_decorator import unasync
 
 
@@ -35,22 +36,24 @@ def booty_exe():
     return p
 
 
+
 @unasync
-async def test_reboot_skipping_firmware(port):
-    async with OpenRoverConnectionContext(port, 1) as o:
+async def test_reboot_skipping_bootloader(port):
+    async with OpenRoverConnection(port, 1) as rw:
+        o = OpenRoverProtocol(*rw)
         assert isinstance(o, OpenRoverProtocol)
         # set a long timeout in case rover is already in bootloader
         try:
             o.write(0, 0, 0, 10, 40)
-            i, version = await o.read_one(timeout=15)
+            i, version = await o._read_one(timeout=15)
             assert i == 40
             assert (version.major, version.minor) >= (1, 4), 'Bootloader requires OpenRover firmware version>1.4.0'
         except futures.TimeoutError:
             assert False, 'Rover did not respond. does it have firmware?'
         o.write(0, 0, 0, 230, 1)
 
-    await asyncio.sleep(5)
-    # check that rover reboots quickly (skips firmware)
+    await asyncio.sleep(10)
+    # check that rover reboots quickly (skips bootloader)
     async with OpenRover(port) as o:
         version = await o.get_data(40, timeout=5)
 
@@ -58,7 +61,7 @@ async def test_reboot_skipping_firmware(port):
 @unasync
 async def test_bootloader(port, powerboard_firmware_file, booty_exe):
     # note this test can take a loooong time
-    async with OpenRoverConnectionContext(port, 1) as o:
+    async with OpenRoverConnection(port, 1) as o:
         assert isinstance(o, OpenRoverProtocol)
         o.write(0, 0, 0, 230, 0)
 

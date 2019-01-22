@@ -5,7 +5,7 @@ import time
 from math import isclose
 import pytest
 
-from openrover import OpenRover, OpenRoverException, find_openrover, iterate_openrovers
+from openrover import OpenRover, OpenRoverException, find_openrover
 from openrover_data import OpenRoverFirmwareVersion
 from unasync_decorator import unasync
 
@@ -18,12 +18,6 @@ async def rover():
     async with OpenRover() as o:
         yield o
     pass
-
-
-@unasync
-async def test_list_openrover_devices():
-    async for s in iterate_openrovers():
-        assert isinstance(s, str)
 
 
 def test_find_openrover():
@@ -44,7 +38,8 @@ async def test_get_version(rover):
 
 @unasync
 async def test_recover_from_bad_data(rover):
-    rover._connection._transport.write(b'test' * 20)
+    rover._rover_protocol._writer.write(b'test' * 20)
+
     for i in range(3):
         try:
             result = await rover.get_data(40)
@@ -80,13 +75,13 @@ async def test_build_number():
 async def test_encoder_counts():
     async with OpenRover() as rover:
         enc_counts_1 = (await rover.get_data(14), await rover.get_data(16))
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.3)
         enc_counts_2 = (await rover.get_data(14), await rover.get_data(16))
         assert enc_counts_1 == enc_counts_2
 
         rover.set_motor_speeds(0.2, 0.2, 0.2)
         rover.send_speed()
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.3)
 
         enc_counts_3 = (await rover.get_data(14), await rover.get_data(16))
         enc_diff = ((enc_counts_3[0] - enc_counts_2[0]) % (2 ** 16),
@@ -177,7 +172,7 @@ async def test_encoder_intervals_backward(rover):
     for i in range(20):
         rover.send_speed()
         await asyncio.sleep(0.1)
-        data = await rover.get_data_items([14,16,28,30])
+        data = await rover.get_data_items([14, 16, 28, 30])
         enc_counts_left.append(data[14])
         enc_counts_right.append(data[16])
         enc_intervals_left.append(data[28])
@@ -192,85 +187,72 @@ async def test_encoder_intervals_backward(rover):
 
 
 @unasync
-async def test_power_system_feedback_charging(rover):
-    is_charging = await rover.get_data(38)
-    if is_charging == False:
-        pytest.skip('Robot is not on charging dock')
-    assert is_charging == True
-
-    battery_voltage_a_i2c = await rover.get_data(64)
-    assert 14 < battery_voltage_a_i2c / 1000 < 18  # voltage should be between 14-18 V
-
-    battery_voltage_b_i2c = await rover.get_data(66)
-    assert 14 < battery_voltage_b_i2c / 1000 < 18
-
-    battery_temp_a = await rover.get_data(60)
-    battery_temp_b = await rover.get_data(62)
-    assert 0 < (battery_temp_a / 10 - 273.15) < 100
-    assert 0 < (battery_temp_b / 10 - 273.15) < 100
-
-    # TODO
-    """
+async def test_currents(rover):
     battery_current_a = await rover.get_data(42)
     battery_current_b = await rover.get_data(44)
     battery_current_a_i2c = await rover.get_data(68)
     battery_current_b_i2c = await rover.get_data(70)
-    if is_charging:
-        assert battery_current_a_i2c >= 0
-        assert battery_current_b_i2c >= 0
-    else:
-        assert battery_current_a_i2c < 0
-        assert battery_current_b_i2c < 0
+
+    # must agree within 5% or 200mA
+    assert isclose(battery_current_a, abs(battery_current_a_i2c), rel_tol=0.05, abs_tol=0.2)
+    assert isclose(battery_current_b, abs(battery_current_b_i2c), rel_tol=0.05, abs_tol=0.2)
 
     battery_current_total = await rover.get_data(0)
-    assert abs(battery_current_a + battery_current_b - battery_current_total) < 4
-    assert 3 < await rover.get_data(0) < 100  # total current
-    """
+    assert isclose(battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=.05)
 
 
 @unasync
-async def test_power_system_feedback_notcharging(rover):
-    is_charging = await rover.get_data(38)
-    if is_charging == True:
-        pytest.skip('Robot is on charging dock')
-    assert is_charging == False
+async def test_soc(rover):
+    battery_soc_a = await rover.get_data(34)
+    battery_soc_b = await rover.get_data(34)
+    assert 0 <= battery_soc_a <= 1
+    assert 0 <= battery_soc_b <= 1
+    assert isclose(battery_soc_a, battery_soc_b, rel_tol=0.1, abs_tol=0.1)
 
-    battery_voltage_a = await rover.get_data(24) / 58
-    battery_voltage_a_i2c = await rover.get_data(64) / 1000
+
+@unasync
+async def test_currents_charging(rover):
+    is_charging = await rover.get_data(38)
+    assert is_charging in [True, False]
+
+    battery_current_a_i2c = await rover.get_data(68)
+    battery_current_b_i2c = await rover.get_data(70)
+    if is_charging:
+        # charging battery has positive current
+        assert battery_current_a_i2c >= 0
+        assert battery_current_b_i2c >= 0
+    else:
+        # discharging battery should have negative current
+        assert battery_current_a_i2c <= 0
+        assert battery_current_b_i2c <= 0
+
+
+@unasync
+async def test_voltages(rover):
+    battery_voltage_a = await rover.get_data(24)
+    battery_voltage_a_i2c = await rover.get_data(64)
     assert 14 < battery_voltage_a_i2c < 18  # voltage should be between 14-18 V
     assert 14 < battery_voltage_a < 18
     # must agree within 5% or 50mV
     assert isclose(battery_voltage_a_i2c, battery_voltage_a, rel_tol=0.05, abs_tol=0.05)
 
-    battery_soc_a = await rover.get_data(34)
-    battery_soc_b = await rover.get_data(34)
-    assert 0 <= battery_soc_a <= 100
-    assert 0 <= battery_soc_b <= 100
-    assert abs(battery_soc_a - battery_soc_b) < 10
-
-    battery_voltage_b = await rover.get_data(26) / 58
-    battery_voltage_b_i2c = await rover.get_data(66) / 1000
+    battery_voltage_b = await rover.get_data(26)
+    battery_voltage_b_i2c = await rover.get_data(66)
     assert 14 < battery_voltage_b_i2c < 18
     assert 14 < battery_voltage_b < 18
     # must agree within 5% or 50mV
     assert isclose(battery_voltage_b_i2c, battery_voltage_b, rel_tol=0.05, abs_tol=0.05)
 
-    battery_temp_a = await rover.get_data(60) / 10 - 273.15
-    battery_temp_b = await rover.get_data(62) / 10 - 273.15
-    # check batteries are between 10 and 55 degrees C
-    assert 10 < (battery_temp_a) < 55
-    assert 10 < (battery_temp_b) < 55
 
-    battery_current_a = await rover.get_data(42) / 34
-    battery_current_b = await rover.get_data(44) / 34
-    battery_current_a_i2c = await rover.get_data(68) / 1000
-    battery_current_b_i2c = await rover.get_data(70) / 1000
-    # discharging battery should have negative current
-    assert battery_current_a_i2c < 0
-    assert battery_current_b_i2c < 0
-    # must agree within 5% or 50mA
-    assert isclose(battery_current_a, abs(battery_current_a_i2c), rel_tol=0.05, abs_tol=0.05)
-    assert isclose(battery_current_b, abs(battery_current_b_i2c), rel_tol=0.05, abs_tol=0.05)
+@unasync
+async def test_temperatures(rover):
+    fan_temp = await rover.get_data(20)
+    assert 10 < fan_temp < 55
 
-    battery_current_total = await rover.get_data(0) / 34
-    assert isclose(battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=.05)
+    battery_temp_a = await rover.get_data(60)
+    battery_temp_b = await rover.get_data(62)
+
+    # Rated operating temperature check batteries are between 10 and 55 degrees C
+    assert 10 < battery_temp_a < 55
+    assert 10 < battery_temp_b < 55
+    assert abs(battery_temp_a - battery_temp_b) < 5

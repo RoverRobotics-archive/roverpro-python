@@ -1,5 +1,6 @@
 import asyncio
-from typing import AsyncIterable
+from asyncio import Queue
+from typing import AsyncIterable, Callable
 
 
 async def alist(aiterable: AsyncIterable):
