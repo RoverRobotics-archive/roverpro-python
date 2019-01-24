@@ -1,25 +1,17 @@
-import asyncio
-from asyncio import futures
 from pathlib import Path
 import shutil
-import subprocess
-import warnings
 
 import pytest
-from serial.tools import list_ports
+import trio
 
-from connection import OpenRoverConnection
-from openrover import OpenRover
 from openrover_protocol import OpenRoverProtocol
-from unasync_decorator import unasync
+from serial_trio import open_rover
 
 
 @pytest.fixture
-def port():
-    ports = [comport.device for comport in list_ports.comports() if comport.manufacturer == 'FTDI']
-    if len(ports) > 1:
-        warnings.warn(f'Multiple ports found, {ports} using {ports[0]}')
-    return ports[0]
+async def device():
+    async with open_rover() as e:
+        yield e
 
 
 @pytest.fixture
@@ -36,50 +28,59 @@ def booty_exe():
     return p
 
 
+async def test_reboot(device):
+    o = OpenRoverProtocol(device)
+    assert isinstance(o, OpenRoverProtocol)
+    # set a long timeout in case rover is already in bootloader
 
-@unasync
-async def test_reboot_skipping_bootloader(port):
-    async with OpenRoverConnection(port, 1) as rw:
-        o = OpenRoverProtocol(*rw)
-        assert isinstance(o, OpenRoverProtocol)
-        # set a long timeout in case rover is already in bootloader
-        try:
-            o.write(0, 0, 0, 10, 40)
-            i, version = await o._read_one(timeout=15)
+    try:
+        with trio.fail_after(2):
+            await o.write(0, 0, 0, 10, 40)
+            i, version = await o.iter_packets().__anext__()
             assert i == 40
-            assert (version.major, version.minor) >= (1, 4), 'Bootloader requires OpenRover firmware version>1.4.0'
-        except futures.TimeoutError:
-            assert False, 'Rover did not respond. does it have firmware?'
-        o.write(0, 0, 0, 230, 1)
+    except trio.TooSlowError:
+        assert False, 'Rover did not respond. does it have firmware?'
 
-    await asyncio.sleep(10)
-    # check that rover reboots quickly (skips bootloader)
-    async with OpenRover(port) as o:
-        version = await o.get_data(40, timeout=5)
+    try:
+        await o.write(0, 0, 0, 230, 1) # reboot the device
+
+        await o.write(0, 0, 0, 10, 40)
+        with pytest.raises(trio.TooSlowError):
+            with trio.fail_after(2):
+                await o.iter_packets().__anext__()
+
+    finally:
+        # need to wait for device to come back up
+        await trio.sleep(10)
 
 
-@unasync
-async def test_bootloader(port, powerboard_firmware_file, booty_exe):
+async def test_bootloader(powerboard_firmware_file, booty_exe):
     # note this test can take a loooong time
-    async with OpenRoverConnection(port, 1) as o:
-        assert isinstance(o, OpenRoverProtocol)
-        o.write(0, 0, 0, 230, 0)
+
+    async with open_rover() as device:
+        o = OpenRoverProtocol(device)
+        await o.write(0, 0, 0, 230, 0)
+        port = device.port
 
     # flash rover firmware
     args = [
         str(booty_exe),
-        '--port', port,
+        '--port', str(port),
         '--baudrate', '57600',
         '--hexfile', str(powerboard_firmware_file.absolute()),
         '--erase',
         '--load',
         '--verify'
     ]
-    retcode, stdout = subprocess.getstatusoutput(args)
-    assert retcode == 0
-    assert 'device verified' in stdout
 
-    await asyncio.sleep(30)
-    async with OpenRover() as o:
+    async with trio.subprocess.Process(args, stdout=trio.subprocess.PIPE, stderr=trio.subprocess.PIPE) as p:
+        assert await p.wait() == 0
+        output = (await p.stdout.receive_some(10000)).decode()
+        errout = (await p.stderr.receive_some(10000)).decode()
+        assert 'device not responding' not in errout,'Rover did not respond to booty. Does it have a bootloader?'
+        assert 'device verified' in output
+
+    async with open_rover() as device:
+        o = OpenRoverProtocol(device)
         version = await o.get_data(40)
         assert (version.major, version.minor, version.patch) == (1, 5, 0)

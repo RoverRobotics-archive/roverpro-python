@@ -6,7 +6,6 @@ from typing import Any, Dict, Iterable, MutableMapping
 
 from serial.tools import list_ports
 
-from connection import OpenRoverConnection
 from openrover.util import OpenRoverException
 from openrover_protocol import OpenRoverProtocol
 
@@ -18,7 +17,6 @@ class OpenRover:
     _port = None
     _next_data = None
     _rover_protocol = None
-    _connection: OpenRoverConnection
 
     def __init__(self, port=None):
         """An OpenRover object """
@@ -48,7 +46,7 @@ class OpenRover:
 
     async def process_data(self):
         try:
-            async for k, v in self._rover_protocol.iter_messages():
+            async for k, v in self._rover_protocol.iter_packets():
                 old_future = self._next_data.pop(k, None)
                 if old_future is None:
                     raise RuntimeWarning('value was not expected %s: %s', k, v)
@@ -101,7 +99,7 @@ class OpenRover:
         new_future = asyncio.get_event_loop().create_future()
         self._next_data[index] = new_future
         await asyncio.wait([self.send_command(10, index), new_future], timeout=1)
-        return await new_future
+        return await asyncio.wait_for(new_future, 1)
 
     async def get_data_items(self, indices: Iterable[int]) -> Dict[int, Any]:
         keys = list(set(indices))
@@ -123,7 +121,7 @@ async def get_openrover_version(port):
         async with OpenRoverConnection(port, open_timeout=3) as (reader, writer):
             protocol = OpenRoverProtocol(reader, writer)
             await protocol.write(0, 0, 0, 10, 40)
-            async for k, v in protocol.iter_messages():
+            async for k, v in protocol.iter_packets():
                 if k == 40:
                     return v
 
@@ -133,14 +131,3 @@ async def get_openrover_version(port):
     except Exception as e:
         raise OpenRoverException(f'Did not respond to request for OpenRover version') from e
 
-
-async def find_openrover():
-    ftdi_ports = [comport.device for comport in list_ports.comports() if comport.manufacturer == 'FTDI']
-    for port in ftdi_ports:
-        try:
-            v = await asyncio.wait_for(get_openrover_version(port), 5)
-            return port
-        except Exception as e:
-            logging.warning(f'Could not get OpenRover version of device {port}:{e}')
-
-    raise OpenRoverException('No Rover device found')

@@ -1,4 +1,5 @@
 import asyncio
+from asyncio import StreamWriter, StreamReader
 from enum import IntEnum
 import logging
 import struct
@@ -6,7 +7,6 @@ from typing import Any, Optional, Tuple
 
 from dataclasses import dataclass
 from serial_asyncio import SerialTransport
-
 
 _START_OF_FRAME = 0xf7
 _END_OF_FRAME = 0x7f
@@ -47,34 +47,14 @@ class BootyDeviceMetadata():
     boot_start_address: int
 
 
-class BootyProtocol(asyncio.Protocol):
-    _transport: Optional[SerialTransport] = None
+class BootyProtocol:
     _stream_reader: asyncio.StreamReader = None
-    _queue: asyncio.Queue[Tuple[BootyCommand, Any]]
     _process_packets_task = None
 
-    def __init__(self):
-        self._stream_reader = asyncio.StreamReader()
+    def __init__(self, reader: StreamReader, writer: StreamWriter):
         self._queue = asyncio.Queue()
-        asyncio.create_task(self._receive_all_packets)
-
-    # region asyncio.Protocol methods
-    def connection_made(self, transport):
-        self._stream_reader.set_transport(transport)
-        self._process_packets_task = asyncio.create_task(self._receive_all_packets)
-
-    def connection_lost(self, exc: Optional[Exception]):
-        self._stream_reader = asyncio.StreamReader()
-        self._process_packets_task.cancel()
-        self._process_packets_task = None
-
-    def data_received(self, data: bytes):
-        self._stream_reader.feed_data(data)
-
-    def eof_received(self):
-        self._stream_reader.feed_eof()
-
-    # endregion
+        self._reader = reader
+        self._writer = writer
 
     # region Booty Protocol actions
     async def get_device_metadata(self):
@@ -103,7 +83,6 @@ class BootyProtocol(asyncio.Protocol):
 
     def cmd_start_app(self):
         self._cmd_write(BootyCommand.START_APP)
-        self.connection_lost(exc=None)
 
     def cmd_write_row(self, addr, instructions):
         self._cmd_write(BootyCommand.WRITE_ROW, addr, instructions)
@@ -115,12 +94,13 @@ class BootyProtocol(asyncio.Protocol):
         self._cmd_write(BootyCommand.ERASE_PAGE, addr)
 
     async def cmd_read_addr(self, addr):
-        self._cmd_write(BootyCommand.READ_ADDR, addr)
+        await self._cmd_write(BootyCommand.READ_ADDR, addr)
         return await self._cmd_expect_response(BootyCommand.READ_ADDR)
 
     async def cmd_read_max(self, addr):
-        self._cmd_write(BootyCommand.READ_MAX, addr)
+        await self._cmd_write(BootyCommand.READ_MAX, addr)
         return await self._cmd_expect_response(BootyCommand.READ_MAX)
+
     # endregion
 
     def _pack_data(self, verb, *args):
@@ -174,7 +154,7 @@ class BootyProtocol(asyncio.Protocol):
     async def _cmd_request_data(self, verb: BootyCommand) -> asyncio.Future:
         assert verb in [BootyCommand.READ_PLATFORM, BootyCommand.READ_VERSION, BootyCommand.READ_ROW_LEN, BootyCommand.READ_PAGE_LEN, BootyCommand.READ_PROG_LEN, BootyCommand.READ_MAX_PROG_SIZE,
                         BootyCommand.READ_APP_START_ADDRESS, BootyCommand.READ_BOOT_START_ADDRESS]
-        self._cmd_write(verb)
+        await self._cmd_write(verb)
 
         reply_verb, data = await self._queue.get()
         if verb != reply_verb:
@@ -187,10 +167,11 @@ class BootyProtocol(asyncio.Protocol):
             raise BootyProtocolError(f'Requested data type {expect_verb} but received {reply_verb} in response', data)
         return data
 
-    def _cmd_write(self, verb, *args):
-        self._transport.write(bytes([_START_OF_FRAME]))
-        self._transport.write(self._make_tx_packet(verb, *args))
-        self._transport.write(bytes([_END_OF_FRAME]))
+    async def _cmd_write(self, verb, *args):
+        self._writer.write(
+            bytes([_START_OF_FRAME, *self._make_tx_packet(verb, *args), _END_OF_FRAME])
+        )
+        await self._writer.drain()
 
     def _make_tx_packet(self, verb, *args):
         """Create a data packet, not including framing bytes"""
@@ -227,13 +208,10 @@ class BootyProtocol(asyncio.Protocol):
 
         return self._unpack_data(payload)
 
-    async def _receive_all_packets(self):
-        while not self._stream_reader.at_eof():
+    async def iter_messages(self):
+        while True:
             try:
-                p = await self._receive_packet()
-                self._queue.put_nowait(p)
-
+                msg = await self._receive_packet()
+                yield msg
             except BootyProtocolError as e:
                 logging.warning(f'Skipping packet because of error {e}')
-                continue
-

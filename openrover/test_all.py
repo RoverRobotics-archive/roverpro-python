@@ -5,7 +5,7 @@ import time
 from math import isclose
 import pytest
 
-from openrover import OpenRover, OpenRoverException, find_openrover
+from openrover import OpenRover, OpenRoverException
 from openrover_data import OpenRoverFirmwareVersion
 from unasync_decorator import unasync
 

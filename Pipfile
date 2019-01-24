@@ -8,7 +8,8 @@ twine = "*"
 
 [packages]
 openrover = {editable = true,path = "."}
-pyserial-asyncio = {editable = true,git = "https://github.com/RoverRobotics/pyserial-asyncio.git"}
+trio = "*"
+pytest-trio = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"
