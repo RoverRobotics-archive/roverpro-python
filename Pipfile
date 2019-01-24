@@ -8,8 +8,7 @@ twine = "*"
 
 [packages]
 openrover = {editable = true,path = "."}
-trio = "*"
-pytest-trio = "*"
+# note packages should generally go in setup.cfg, not here
 
 [requires]
 python_version = "3.7"
