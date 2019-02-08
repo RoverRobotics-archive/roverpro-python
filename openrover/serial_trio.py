@@ -85,9 +85,9 @@ def get_possible_rover_devices() -> List[Callable[[], SerialTrio]]:
             continue
         ports.append(comport.device)
         DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, stopbits=1)
-        return [partial(SerialTrio, port, **DEFAULT_SERIAL_KWARGS) for port in ports]
+    return [partial(SerialTrio, port, **DEFAULT_SERIAL_KWARGS) for port in ports]
 
 
 def open_first_possible_rover_device():
-    """use this as `with open_first_possible_rover_device() as c:` """
+    """use this as `async with open_first_possible_rover_device() as c:` """
     return next(iter(get_possible_rover_devices()))()
