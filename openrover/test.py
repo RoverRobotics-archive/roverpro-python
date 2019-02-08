@@ -1,9 +1,11 @@
-import openrover
+from importlib.util import find_spec
+
 import pytest
 
 
 def main():
-    return pytest.main(openrover.__path__)
+    openrover_search_paths = find_spec('openrover').submodule_search_locations
+    return pytest.main(openrover_search_paths)
 
 
 if __name__ == '__main__':
