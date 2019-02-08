@@ -1,4 +1,3 @@
-import asyncio
 import statistics
 import time
 
@@ -7,23 +6,17 @@ import pytest
 
 from openrover import OpenRover, OpenRoverException
 from openrover_data import OpenRoverFirmwareVersion
-from unasync_decorator import unasync
-
-loop = asyncio.get_event_loop()
 
 
 @pytest.fixture
-@unasync
 async def rover():
     async with OpenRover() as o:
         yield o
-    pass
 
 
-def test_find_openrover():
-    rover = asyncio.get_event_loop().run_until_complete(find_openrover())
-    assert rover is not None
-    assert isinstance(rover, str)
+async def test_find_openrover(rover):
+    async with OpenRover() as o:
+        assert o.port is not None
 
 
 def test_create():
@@ -31,12 +24,10 @@ def test_create():
     assert o is not None
 
 
-@unasync
 async def test_get_version(rover):
     assert await rover.get_data(40) is not None
 
 
-@unasync
 async def test_recover_from_bad_data(rover):
     rover._rover_protocol._writer.write(b'test' * 20)
 
@@ -50,7 +41,6 @@ async def test_recover_from_bad_data(rover):
     assert False
 
 
-@unasync
 async def test_missing_device():
     rover = OpenRover(port='missingdevice')
     with pytest.raises(OpenRoverException):
@@ -60,7 +50,6 @@ async def test_missing_device():
             raise
 
 
-@unasync
 async def test_build_number():
     async with OpenRover() as rover:
         build_no = await rover.get_data(40)
@@ -71,7 +60,6 @@ async def test_build_number():
         assert 0 <= build_no.patch < 100
 
 
-@unasync
 async def test_encoder_counts():
     async with OpenRover() as rover:
         enc_counts_1 = (await rover.get_data(14), await rover.get_data(16))
@@ -90,7 +78,6 @@ async def test_encoder_counts():
         assert 0 < enc_diff[1] < 200
 
 
-@unasync
 async def test_encoder_intervals_still(rover):
     await asyncio.sleep(2)
     enc_counts_left = []
@@ -127,7 +114,6 @@ def strictly_decreasing(L):
     return all(x > y for x, y in zip(L, L[1:]))
 
 
-@unasync
 async def test_encoder_intervals_forward(rover):
     enc_counts_left = []
     enc_counts_right = []
@@ -152,7 +138,6 @@ async def test_encoder_intervals_forward(rover):
     assert 0.001 < statistics.stdev(enc_intervals_left) < statistics.mean(enc_intervals_left) * 0.1
 
 
-@unasync
 async def test_fan_speed(rover):
     for i in range(0, 241, 20):
         rover.set_fan_speed(i)
@@ -160,7 +145,6 @@ async def test_fan_speed(rover):
         assert i == await rover.get_data(48)
 
 
-@unasync
 async def test_encoder_intervals_backward(rover):
     enc_counts_left = []
     enc_counts_right = []
@@ -186,7 +170,6 @@ async def test_encoder_intervals_backward(rover):
     assert 0.001 < statistics.stdev(enc_intervals_left) < statistics.mean(enc_intervals_left) * 0.1
 
 
-@unasync
 async def test_currents(rover):
     battery_current_a = await rover.get_data(42)
     battery_current_b = await rover.get_data(44)
@@ -201,7 +184,6 @@ async def test_currents(rover):
     assert isclose(battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=.05)
 
 
-@unasync
 async def test_soc(rover):
     battery_soc_a = await rover.get_data(34)
     battery_soc_b = await rover.get_data(34)
@@ -210,7 +192,6 @@ async def test_soc(rover):
     assert isclose(battery_soc_a, battery_soc_b, rel_tol=0.1, abs_tol=0.1)
 
 
-@unasync
 async def test_currents_charging(rover):
     is_charging = await rover.get_data(38)
     assert is_charging in [True, False]
@@ -227,7 +208,6 @@ async def test_currents_charging(rover):
         assert battery_current_b_i2c <= 0
 
 
-@unasync
 async def test_voltages(rover):
     battery_voltage_a = await rover.get_data(24)
     battery_voltage_a_i2c = await rover.get_data(64)
@@ -244,7 +224,6 @@ async def test_voltages(rover):
     assert isclose(battery_voltage_b_i2c, battery_voltage_b, rel_tol=0.05, abs_tol=0.05)
 
 
-@unasync
 async def test_temperatures(rover):
     fan_temp = await rover.get_data(20)
     assert 10 < fan_temp < 55

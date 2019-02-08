@@ -3,10 +3,9 @@ from asyncio import StreamWriter, StreamReader
 from enum import IntEnum
 import logging
 import struct
-from typing import Any, Optional, Tuple
+from typing import Any, Tuple
 
 from dataclasses import dataclass
-from serial_asyncio import SerialTransport
 
 _START_OF_FRAME = 0xf7
 _END_OF_FRAME = 0x7f

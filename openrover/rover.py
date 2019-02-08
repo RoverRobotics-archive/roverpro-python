@@ -1,13 +1,8 @@
-import asyncio
-from asyncio import InvalidStateError
 from concurrent.futures import Future
-import logging
 from typing import Any, Dict, Iterable, MutableMapping
-
-from serial.tools import list_ports
-
 from openrover.util import OpenRoverException
 from openrover_protocol import OpenRoverProtocol
+from serial_trio import open_first_possible_rover_device
 
 
 class OpenRover:
@@ -20,7 +15,8 @@ class OpenRover:
 
     def __init__(self, port=None):
         """An OpenRover object """
-        self._loop = asyncio.get_event_loop()
+        raise NotImplementedError
+
         self._motor_left = 0
         self._motor_right = 0
         self._motor_flipper = 0
@@ -30,12 +26,10 @@ class OpenRover:
     async def aopen(self):
         port = self._port
         if port is None:
-            port = await find_openrover()
+            port = await open_first_possible_rover_device()
 
-        self._connection = OpenRoverConnection(port, open_timeout=1)
         r, w = await self._connection.aopen()
         self._rover_protocol = OpenRoverProtocol(r, w)
-        self._process_data_task = asyncio.ensure_future(self.process_data())
 
     async def __aenter__(self):
         await self.aopen()

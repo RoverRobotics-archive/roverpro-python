@@ -1,5 +1,4 @@
 import asyncio
-from asyncio import Queue
 from typing import AsyncIterable, Callable
 
 

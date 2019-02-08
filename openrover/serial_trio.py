@@ -86,5 +86,6 @@ def get_possible_rover_devices() -> List[Callable[[], SerialTrio]]:
         return [partial(SerialTrio, port, **DEFAULT_SERIAL_KWARGS) for port in ports]
 
 
-def open_rover():
+def open_first_possible_rover_device():
+    """use this as `with open_first_possible_rover_device() as c:` """
     return next(iter(get_possible_rover_devices()))()

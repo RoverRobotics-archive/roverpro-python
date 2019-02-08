@@ -2,15 +2,16 @@ import trio
 
 from openrover_data import OpenRoverFirmwareVersion
 from openrover_protocol import OpenRoverProtocol
-from serial_trio import open_rover
+from serial_trio import open_first_possible_rover_device
 
 n = 800
+
 
 
 async def test_protocol_write_read_immediate():
     n_received = 0
 
-    async with open_rover() as port:
+    async with open_first_possible_rover_device() as port:
         protocol = OpenRoverProtocol(port)
         messages = protocol.iter_packets()
         for i in range(n):
@@ -30,7 +31,7 @@ async def test_protocol_write_read_immediate():
 async def test_protocol_writes_then_reads():
     n_received = 0
 
-    async with open_rover() as port:
+    async with open_first_possible_rover_device() as port:
         protocol = OpenRoverProtocol(port)
         messages = protocol.iter_packets()
 
