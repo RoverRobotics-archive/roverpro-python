@@ -1,7 +1,8 @@
-import openrover.booty_protocol
-
-from openrover.rover import OpenRover, OpenRoverException
+from .openrover_protocol import OpenRoverProtocol
+from .serial_trio import open_first_possible_rover_device
+from .util import OpenRoverException
 
 name = 'openrover'
 
-__all__ = ['OpenRover', 'OpenRoverException']
+# rover.OpenRover is not yet ready for primetime
+__all__ = ['OpenRoverException', 'OpenRoverProtocol', 'open_first_possible_rover_device']

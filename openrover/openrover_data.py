@@ -1,10 +1,9 @@
 import abc
+from dataclasses import dataclass
 from enum import IntEnum
 import typing
 
-from dataclasses import dataclass
-
-from openrover.util import OpenRoverException
+from .util import OpenRoverException
 
 
 class ReadDataFormat(abc.ABC):

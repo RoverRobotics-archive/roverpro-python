@@ -1,10 +1,12 @@
 from functools import partial
 import logging
 from typing import Callable, List
-
-import serial, serial.tools, serial.tools.list_ports
-import trio
 import warnings
+
+import serial
+import serial.tools
+import serial.tools.list_ports
+import trio
 
 
 class OpenRoverWarning(RuntimeWarning):

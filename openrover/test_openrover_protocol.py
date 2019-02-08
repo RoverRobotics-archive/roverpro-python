@@ -1,11 +1,10 @@
 import trio
 
-from openrover_data import OpenRoverFirmwareVersion
-from openrover_protocol import OpenRoverProtocol
-from serial_trio import open_first_possible_rover_device
+from .openrover_data import OpenRoverFirmwareVersion
+from .openrover_protocol import OpenRoverProtocol
+from .serial_trio import open_first_possible_rover_device
 
 n = 800
-
 
 
 async def test_protocol_write_read_immediate():

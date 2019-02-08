@@ -1,8 +1,9 @@
 from concurrent.futures import Future
 from typing import Any, Dict, Iterable, MutableMapping
-from openrover.util import OpenRoverException
-from openrover_protocol import OpenRoverProtocol
-from serial_trio import open_first_possible_rover_device
+
+from .openrover_protocol import OpenRoverProtocol
+from .serial_trio import open_first_possible_rover_device
+from .util import OpenRoverException
 
 
 class OpenRover:
@@ -124,4 +125,3 @@ async def get_openrover_version(port):
         return version
     except Exception as e:
         raise OpenRoverException(f'Did not respond to request for OpenRover version') from e
-
