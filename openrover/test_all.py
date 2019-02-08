@@ -1,11 +1,12 @@
+from math import isclose
 import statistics
 import time
 
-from math import isclose
 import pytest
+import trio
 
-from openrover import OpenRover, OpenRoverException
-from openrover_data import OpenRoverFirmwareVersion
+from . import OpenRover, OpenRoverException
+from .openrover_data import OpenRoverFirmwareVersion
 
 
 @pytest.fixture
@@ -63,13 +64,13 @@ async def test_build_number():
 async def test_encoder_counts():
     async with OpenRover() as rover:
         enc_counts_1 = (await rover.get_data(14), await rover.get_data(16))
-        await asyncio.sleep(0.3)
+        await trio.sleep(0.3)
         enc_counts_2 = (await rover.get_data(14), await rover.get_data(16))
         assert enc_counts_1 == enc_counts_2
 
         rover.set_motor_speeds(0.2, 0.2, 0.2)
         rover.send_speed()
-        await asyncio.sleep(0.3)
+        await trio.sleep(0.3)
 
         enc_counts_3 = (await rover.get_data(14), await rover.get_data(16))
         enc_diff = ((enc_counts_3[0] - enc_counts_2[0]) % (2 ** 16),
@@ -79,7 +80,7 @@ async def test_encoder_counts():
 
 
 async def test_encoder_intervals_still(rover):
-    await asyncio.sleep(2)
+    await trio.sleep(2)
     enc_counts_left = []
     enc_counts_right = []
     enc_intervals_left = []
@@ -88,7 +89,7 @@ async def test_encoder_intervals_still(rover):
 
     for i in range(5):
         rover.send_speed()
-        await asyncio.sleep(0.1)
+        await trio.sleep(0.1)
         enc_counts_left.append(await rover.get_data(14))
         enc_counts_right.append(await rover.get_data(16))
         enc_intervals_left.append(await rover.get_data(28))
@@ -141,7 +142,7 @@ async def test_encoder_intervals_forward(rover):
 async def test_fan_speed(rover):
     for i in range(0, 241, 20):
         rover.set_fan_speed(i)
-        await asyncio.sleep(0.1)
+        await trio.sleep(0.1)
         assert i == await rover.get_data(48)
 
 
@@ -155,7 +156,7 @@ async def test_encoder_intervals_backward(rover):
 
     for i in range(20):
         rover.send_speed()
-        await asyncio.sleep(0.1)
+        await trio.sleep(0.1)
         data = await rover.get_data_items([14, 16, 28, 30])
         enc_counts_left.append(data[14])
         enc_counts_right.append(data[16])

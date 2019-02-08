@@ -5,10 +5,11 @@ from subprocess import list2cmdline
 import pytest
 import trio
 
-from openrover_protocol import OpenRoverProtocol
-from serial_trio import open_first_possible_rover_device
+from .openrover_protocol import OpenRoverProtocol
+from .serial_trio import open_first_possible_rover_device
 
 device = pytest.fixture(open_first_possible_rover_device)
+
 
 @pytest.fixture
 def powerboard_firmware_file():
@@ -70,7 +71,7 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
         '--verify'
     ]
 
-    print('running bootloader: '+ list2cmdline(args))
+    print('running bootloader: ' + list2cmdline(args))
 
     with trio.fail_after(60 * 15):
 
@@ -83,7 +84,7 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                         while True:
                             with trio.fail_after(15):
                                 a_line = await line_generator.__anext__()
-                            print('got line: '+a_line)
+                            print('got line: ' + a_line)
                             lines.append(a_line)
                     except trio.TooSlowError:
                         pytest.fail(f'booty became unresponsive after output {lines}')
@@ -91,7 +92,6 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                         pass
                     await trio.sleep(1)
                     assert any(['device verified' in a_line for a_line in lines])
-
 
                 async def check_stderr():
                     error_output = await stream_to_string(booty.stderr)

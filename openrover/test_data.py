@@ -1,4 +1,4 @@
-from openrover_data import FAN_SPEED_RESPONSE_FORMAT, MOTOR_EFFORT_FORMAT
+from .openrover_data import FAN_SPEED_RESPONSE_FORMAT, MOTOR_EFFORT_FORMAT
 
 
 def test_fan_speed_format():
@@ -9,5 +9,5 @@ def test_fan_speed_format():
 
 def test_motor_effort():
     assert list(MOTOR_EFFORT_FORMAT.pack(-1)) == [0]
-    assert list( MOTOR_EFFORT_FORMAT.pack(0)) == [125]
-    assert list(MOTOR_EFFORT_FORMAT.pack(+1))==[250]
+    assert list(MOTOR_EFFORT_FORMAT.pack(0)) == [125]
+    assert list(MOTOR_EFFORT_FORMAT.pack(+1)) == [250]

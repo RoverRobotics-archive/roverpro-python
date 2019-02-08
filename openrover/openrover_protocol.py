@@ -3,9 +3,9 @@ from typing import Tuple
 
 import trio
 
-from openrover.util import OpenRoverException
-from openrover_data import MOTOR_EFFORT_FORMAT, OPENROVER_DATA_ELEMENTS
-from serial_trio import SerialTrio
+from .openrover_data import MOTOR_EFFORT_FORMAT, OPENROVER_DATA_ELEMENTS
+from .serial_trio import SerialTrio
+from .util import OpenRoverException
 
 SERIAL_START_BYTE = bytes([253])
 
