@@ -5,8 +5,9 @@ import time
 import pytest
 import trio
 
-from . import OpenRover, OpenRoverException
 from .openrover_data import OpenRoverFirmwareVersion
+from .rover import OpenRover
+from .util import OpenRoverException
 
 
 @pytest.fixture
