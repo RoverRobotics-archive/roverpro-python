@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncIterable
+from typing import AsyncIterable, Callable
 
 
 async def alist(aiterable: AsyncIterable):
@@ -14,7 +14,7 @@ async def timeout_each(delay: float, aiterable: AsyncIterable):
     iter = aiterable.__aiter__()
     try:
         while True:
-            item = await asyncio.wait_for(asyncio.create_task(iter.__anext__()), delay)
+            item = await asyncio.wait_for(asyncio.ensure_future(iter.__anext__()), delay)
             yield item
     except asyncio.TimeoutError:
         pass

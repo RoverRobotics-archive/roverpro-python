@@ -1,9 +1,8 @@
 import abc
-from dataclasses import dataclass
-import enum
-from enum import Enum
-import struct
+from enum import IntEnum
 import typing
+
+from dataclasses import dataclass
 
 from openrover.util import OpenRoverException
 
@@ -11,6 +10,11 @@ from openrover.util import OpenRoverException
 class ReadDataFormat(abc.ABC):
     python_type: typing.Type = None
 
+    @abc.abstractmethod
+    def description(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def unpack(self, b: bytes):
         raise NotImplementedError
 
@@ -18,20 +22,33 @@ class ReadDataFormat(abc.ABC):
 class WriteDataFormat(abc.ABC):
     python_type: typing.Type = None
 
+    @abc.abstractmethod
+    def description(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def pack(self, value) -> bytes:
         raise NotImplementedError
 
 
-class StructDataFormat(ReadDataFormat, WriteDataFormat):
-    def __init__(self, format_: str, python_type):
-        self.python_type = python_type
-        self._struct = struct.Struct(format_)
+class IntDataFormat(ReadDataFormat, WriteDataFormat):
+    def __init__(self, nbytes, signed):
+        self.nbytes = nbytes
+        self.signed = signed
+
+    def description(self):
+        s = 'signed' if self.signed else 'unsigned'
+        n = self.nbytes * 8
+        return f'{s} integer ({n} bits)'
 
     def pack(self, value):
-        return self._struct.pack(value)
+        try:
+            return int(value).to_bytes(self.nbytes, byteorder='big', signed=self.signed)
+        except Exception as e:
+            raise
 
-    def unpack(self, b):
-        return self._struct.unpack(b)[0]
+    def unpack(self, b: bytes):
+        return int.from_bytes(b, byteorder='big', signed=self.signed)
 
 
 OPENROVER_LEGACY_VERSION = 16421
@@ -55,7 +72,7 @@ class OpenRoverFirmwareVersion:
     def minor(self):
         if self.value == OPENROVER_LEGACY_VERSION:
             return 0
-        return self.value % 100 // 100
+        return self.value // 100 % 100
 
     @property
     def patch(self):
@@ -68,32 +85,29 @@ class DataFormatFirmwareVersion(ReadDataFormat):
     python_type = OpenRoverFirmwareVersion
 
     def unpack(self, b):
-        v, = struct.Struct('!H').unpack(b)
+        v = UINT16.unpack(b)
         return OpenRoverFirmwareVersion(v)
 
-
-class DataFormatMotorEffort(WriteDataFormat):
-    python_type = float
-
-    def pack(self, value):
-        assert -1 < value < 1
-        b = struct.Struct('!B').pack(int(round(value * 125)) + 125)
-        return b
+    def description(self):
+        return 'XYYZZ, where X=major version, Y=minor version, Z = patch version. e.g. 10502 = version 1.05.02. The special value 16421 represents pre-1.3 versions'
 
 
 class DataFormatChargerState(ReadDataFormat, WriteDataFormat):
     CHARGER_ACTIVE_MAGIC_BYTES = bytes.fromhex('dada')
-    CHARGER_INACTIVE_MAGICS_BYTES = bytes.fromhex('0000')
+    CHARGER_INACTIVE_MAGIC_BYTES = bytes.fromhex('0000')
     python_type = bool
 
     def pack(self, value):
         if value:
             return self.CHARGER_ACTIVE_MAGIC_BYTES
         else:
-            return self.CHARGER_INACTIVE_MAGICS_BYTES
+            return self.CHARGER_INACTIVE_MAGIC_BYTES
 
     def unpack(self, b):
         return (bytes(b) == self.CHARGER_ACTIVE_MAGIC_BYTES)
+
+    def description(self):
+        return '0xDADA if charging, else 0x0000'
 
 
 @dataclass
@@ -129,10 +143,69 @@ class DataFormatBatteryStatus(ReadDataFormat):
             fully_discharged=bool(as_int & 0x0010, )
         )
 
+    def description(self):
+        return 'bit flags'
 
-UINT16 = StructDataFormat('!H', int)
-INT16 = StructDataFormat('!h', int)
-UINT8 = StructDataFormat('!B', int)
+
+class DriveMode(IntEnum):
+    OPEN_LOOP = 0
+    CLOSED_LOOP = 1
+
+
+class DataFormatDriveMode(ReadDataFormat):
+    python_type = DriveMode
+
+    def unpack(self, b: bytes):
+        return DriveMode(UINT16.unpack(b))
+
+    def pack(self, p: DriveMode):
+        return UINT16.pack(p.value)
+
+    def description(self):
+        return DriveMode.__doc__
+
+
+UINT16 = IntDataFormat(2, False)
+INT16 = IntDataFormat(2, True)
+UINT8 = IntDataFormat(1, signed=False)
+
+
+class DataFormatFixedPrecision(ReadDataFormat, WriteDataFormat):
+    """A fractional number packed as an integer, but representing a fractional number"""
+
+    def __init__(self, base_type, step=1.0, zero=0.0):
+        self.base_type = base_type
+        # a change of 1 in the python type corresponds to a change of this many in the base type
+        self.step = step
+        # the value of 0 in the python type corresponds to this value in the base type
+        self.zero = zero
+
+    def unpack(self, b: bytes):
+        n = self.base_type.unpack(b)
+        return (n - self.zero) / self.step
+
+    def pack(self, p):
+        n = round(p * self.step + self.zero)
+        return self.base_type.pack(n)
+
+    def description(self):
+        return f'fractional (resolution=1/{self.step}, zero={self.zero}) stored as {self.base_type.description()}'
+
+
+OLD_CURRENT_FORMAT = DataFormatFixedPrecision(UINT16, 34)
+
+SIGNED_MILLIS_FORMAT = DataFormatFixedPrecision(INT16, 1000)
+UNSIGNED_MILLIS_FORMAT = DataFormatFixedPrecision(UINT16, 1000)
+OLD_VOLTAGE_FORMAT = DataFormatFixedPrecision(UINT16, 58)
+FAN_SPEED_COMMAND_FORMAT = DataFormatFixedPrecision(UINT8, 240)
+FAN_SPEED_RESPONSE_FORMAT = DataFormatFixedPrecision(UINT16, 240)
+DECIKELVIN_FORMAT = DataFormatFixedPrecision(UINT16, 10, zero=2731.5)
+PERCENTAGE_FORMAT = DataFormatFixedPrecision(UINT16, 100)
+MOTOR_EFFORT_FORMAT = DataFormatFixedPrecision(UINT8, 125, 125)
+CHARGER_STATE_FORMAT = DataFormatChargerState()
+FIRMWARE_VERSION_FORMAT = DataFormatFirmwareVersion()
+DRIVE_MODE_FORMAT = DataFormatDriveMode()
+BATTERY_STATUS_FORMAT = DataFormatBatteryStatus()
 
 
 @dataclass
@@ -141,45 +214,64 @@ class DataElement:
     data_format: ReadDataFormat
     name: str
     description: str = None
+    not_implemented: bool = False
 
 
 elements = [
-    DataElement(0, UINT16, 'PWR_TOTAL_CURRENT', 'total current from battery in units of .029 Amps'),
-    DataElement(2, UINT16, 'MOTOR_FB_RPM.left'),  # NOT YET IMPLEMENTED
-    DataElement(4, UINT16, 'MOTOR_FB_RPM.right'),  # NOT YET IMPLEMENTED
-    DataElement(6, UINT16, 'FLIPPER_FB_POSITION.pot1', 'flipper position sensor 1. 0=15 degrees; 1024=330 degrees;'),
-    DataElement(8, UINT16, 'FLIPPER_FB_POSITION.pot2', 'flipper position sensor 2. 0=15 degrees; 1024=330 degrees;'),
-    DataElement(10, UINT16, 'MOTOR_FB_CURRENT_left', 'left motor current in units of 1/34 Amps'),
-    DataElement(12, UINT16, 'MOTOR_FB_CURRENT_right', 'right motor current in units of 1/34 Amps'),
-    DataElement(14, UINT16, 'MOTOR_ENCODER_COUNT.left', 'left motor encoder count, mod 2**16'),
-    DataElement(16, UINT16, 'MOTOR_ENCODER_COUNT.right', 'right motor encoder count, mod 2**16'),
-    DataElement(18, UINT16, 'MOTOR_FAULT_FLAGS'),
-    DataElement(20, UINT16, 'MOTOR_TEMP.left', 'left motor temperature in Celsius'),
-    DataElement(22, UINT16, 'MOTOR_TEMP.right', 'right motor temperature in Celsius'),
-    DataElement(24, UINT16, 'PWR_BAT_VOLTAGE.a', 'Voltage of Battery A in units of 1/58 Volt'),
-    DataElement(26, UINT16, 'PWR_BAT_VOLTAGE.b', 'Voltage of Battery B in units of 1/58 Volt'),
-    DataElement(28, UINT16, 'REG_MOTOR_FB_PERIOD_LEFT', 'Left motor period in units of 45 μs'),
-    DataElement(30, UINT16, 'REG_MOTOR_FB_PERIOD_RIGHT', 'Right motor period in units of 45 μs'),
-    DataElement(32, UINT16, 'REG_MOTOR_FB_PERIOD_FLIPPER', 'Flipper motor period in units of 45 μs'),
-    DataElement(34, UINT16, 'ROBOT_REL_SOC_A', 'Percentage charge of battery A'),
-    DataElement(36, UINT16, 'ROBOT_REL_SOC_B', 'Percentage charge of battery B'),
-    DataElement(38, DataFormatChargerState(), 'ROBOT_MOTOR_CHARGER_STATE', 'is battery charging?'),
-    DataElement(40, DataFormatFirmwareVersion(), 'BUILD_NUMBER'),
-    DataElement(42, UINT16, 'PWR_A_CURRENT'),
-    DataElement(44, UINT16, 'PWR_B_CURRENT'),
-    DataElement(46, UINT16, 'MOTOR_FLIPPER_ANGLE'),
-    DataElement(48, UINT16, 'MOTOR_SIDE_FAN_SPEED', 'Side fan speed as currently commanded'),
-    DataElement(50, UINT16, 'CLOSED_LOOP_CONTROL'),
-    DataElement(52, DataFormatBatteryStatus(), 'BATTERY_STATUS_A'),
-    DataElement(54, DataFormatBatteryStatus(), 'BATTERY_STATUS_B'),
-    DataElement(56, UINT16, 'BATTERY_MODE_A'),
-    DataElement(58, UINT16, 'BATTERY_MODE_B'),
-    DataElement(60, UINT16, 'BATTERY_TEMP_A', 'in decikelvins above absolute 0'),
-    DataElement(62, UINT16, 'BATTERY_TEMP_B', 'in decikelvins above absolute 0'),
-    DataElement(64, UINT16, 'BATTERY_VOLTAGE_A', 'mV; sampled from the smartbattery over I2C'),
-    DataElement(66, UINT16, 'BATTERY_VOLTAGE_B', 'mV; sampled from the smartbattery over I2C'),
-    DataElement(68, INT16, 'BATTERY_CURRENT_A', 'current of the battery in mA. >0 = charging; <0 = discharging'),
-    DataElement(70, INT16, 'BATTERY_CURRENT_B', 'current of the battery in mA. >0 = charging; <0 = discharging'),
+    DataElement(0, OLD_CURRENT_FORMAT, 'battery (A+B) current (external)', 'total current from batteries'),
+    DataElement(2, UINT16, 'left motor speed', not_implemented=True),
+    DataElement(4, UINT16, 'right motor speed', not_implemented=True),
+    DataElement(6, UINT16, 'flipper position 1', 'flipper position sensor 1. 0=15 degrees; 1024=330 degrees;'),
+    DataElement(8, UINT16, 'flipper position 2', 'flipper position sensor 2. 0=15 degrees; 1024=330 degrees;'),
+    DataElement(10, OLD_CURRENT_FORMAT, 'left motor current'),
+    DataElement(12, OLD_CURRENT_FORMAT, 'right motor current'),
+    DataElement(14, UINT16, 'left motor encoder count', 'May overflow or underflow. Increments when motor driven forward, decrements backward'),
+    DataElement(16, UINT16, 'right motor encoder count', 'May overflow or underflow. Increments when motor driven forward, decrements backward'),
+    DataElement(18, UINT16, 'motors fault flag'),
+    DataElement(20, UINT16, 'left motor temperature'),
+    DataElement(22, UINT16, 'right motor temperature', not_implemented=True),
+    DataElement(24, OLD_VOLTAGE_FORMAT, 'battery A voltage (external)'),
+    DataElement(26, OLD_VOLTAGE_FORMAT, 'battery B voltage (external)'),
+    DataElement(28, UINT16, 'left motor encoder interval', '0 when motor stopped. Else proportional to motor period (inverse motor speed)'),
+    DataElement(30, UINT16, 'right motor encoder interval', '0 when motor stopped. Else proportional to motor period (inverse motor speed)'),
+    DataElement(32, UINT16, 'flipper motor encoder interval', '0 when motor stopped. Else proportional to motor period (inverse motor speed)', not_implemented=True),
+    DataElement(34, PERCENTAGE_FORMAT, 'battery A state of charge', 'Proportional charge, 0.0=empty, 1.0=full'),
+    DataElement(36, PERCENTAGE_FORMAT, 'battery B state of charge', 'Proportional charge, 0.0=empty, 1.0=full'),
+    DataElement(38, CHARGER_STATE_FORMAT, 'battery charging state'),
+    DataElement(40, FIRMWARE_VERSION_FORMAT, 'release version'),
+    DataElement(42, SIGNED_MILLIS_FORMAT, 'battery A current (external)'),
+    DataElement(44, SIGNED_MILLIS_FORMAT, 'battery B current (external)'),
+    DataElement(46, UINT16, 'motor flipper angle'),
+    DataElement(48, FAN_SPEED_RESPONSE_FORMAT, 'fan speed'),
+    DataElement(50, DRIVE_MODE_FORMAT, 'drive mode'),
+    DataElement(52, BATTERY_STATUS_FORMAT, 'battery A status'),
+    DataElement(54, BATTERY_STATUS_FORMAT, 'battery B status'),
+    DataElement(56, UINT16, 'battery A mode'),
+    DataElement(58, UINT16, 'battery B mode'),
+    DataElement(60, DECIKELVIN_FORMAT, 'battery A temperature (internal)'),
+    DataElement(62, DECIKELVIN_FORMAT, 'battery B temperature (internal)'),
+    DataElement(64, UNSIGNED_MILLIS_FORMAT, 'battery A voltage (internal)'),
+    DataElement(66, UNSIGNED_MILLIS_FORMAT, 'battery B voltage (internal)'),
+    DataElement(68, SIGNED_MILLIS_FORMAT, 'battery A current (internal)', '>0 = charging; <0 = discharging'),
+    DataElement(70, SIGNED_MILLIS_FORMAT, 'battery B current (internal)', '>0 = charging; <0 = discharging'),
 ]
 
 OPENROVER_DATA_ELEMENTS = {e.index: e for e in elements}
+
+
+def strike(s):
+    return f'~~{s}~~'
+
+
+def doc():
+    lines = []
+    lines.append('| # | Name | Data Type | Description |')
+    lines.append('| - | ---- | --------- | ----------- |')
+
+    for de in elements:
+        lines.append(f'| {strike(de.index) if de.not_implemented else de.index} | {de.name} | {de.data_format.description()} | {de.description or ""} |')
+    return '\n'.join(lines)
+
+
+if __name__ == '__main__':
+    print(doc())
