@@ -8,6 +8,7 @@ twine = "*"
 
 [packages]
 openrover = {editable = true,path = "."}
+# note packages should generally go in setup.cfg, not here
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"

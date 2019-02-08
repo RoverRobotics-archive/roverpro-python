@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Package for distribution" type="PythonConfigurationType" factoryName="Python">
-    <module name="openrover_python_driver" />
+    <module name="OpenRover Python Driver" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>

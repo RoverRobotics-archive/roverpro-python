@@ -1,5 +1,7 @@
-from openrover.rover import OpenRover, iterate_openrovers, find_openrover, OpenRoverException
+import openrover.booty_protocol
+
+from openrover.rover import OpenRover, OpenRoverException
 
 name = 'openrover'
 
-__all__ = ['OpenRover', 'OpenRoverException', 'iterate_openrovers', 'find_openrover']
+__all__ = ['OpenRover', 'OpenRoverException']
