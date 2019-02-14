@@ -5,15 +5,17 @@ from subprocess import list2cmdline
 import pytest
 import trio
 
-from .openrover_protocol import OpenRoverProtocol
-from .serial_trio import open_first_possible_rover_device
+import openrover
+from openrover import ftdi_device_context
+from openrover.openrover_data import OpenRoverFirmwareVersion
+from openrover.openrover_protocol import CommandVerbs, OpenRoverProtocol
 
-device = pytest.fixture(open_first_possible_rover_device)
+device = pytest.fixture(ftdi_device_context)
 
 
 @pytest.fixture
 def powerboard_firmware_file():
-    p = Path('test-resources/PowerBoard-1.5.0.hex')
+    p = Path(openrover.__path__[0], 'tests/resources/PowerBoard-1.5.0.hex')
     assert p.is_file()
     return p
 
@@ -26,27 +28,26 @@ def booty_exe():
 
 
 async def test_reboot(device):
-    o = OpenRoverProtocol(device)
-    assert isinstance(o, OpenRoverProtocol)
+    orp = OpenRoverProtocol(device)
     # set a long timeout in case rover is already in bootloader
 
     try:
         with trio.fail_after(2):
-            await o.write(0, 0, 0, 10, 40)
-            i, version = await o.iter_packets().__anext__()
+            await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
+            i, version = await orp.read_one()
             assert i == 40
     except trio.TooSlowError:
         pytest.fail('Rover did not respond. does it have firmware?')
 
     try:
-        await o.write(0, 0, 0, 230, 1)  # reboot the device
+        await orp.write(0, 0, 0, CommandVerbs.RESTART, 0)  # reboot the device
 
-        await o.write(0, 0, 0, 10, 40)
+        await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
         with pytest.raises(trio.TooSlowError):
             with trio.fail_after(2):
-                await o.iter_packets().__anext__()
+                await orp.read_one()
 
-    finally:
+    except trio.TooSlowError:
         # need to wait for device to come back up
         await trio.sleep(10)
 
@@ -55,9 +56,9 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
     # note this test can take a loooong time
 
     with trio.fail_after(1):
-        async with open_first_possible_rover_device() as device:
+        async with ftdi_device_context() as device:
             o = OpenRoverProtocol(device)
-            await o.write(0, 0, 0, 230, 0)
+            await o.write(0, 0, 0, CommandVerbs.RESTART, 0)
             port = device.port
 
     # flash rover firmware
@@ -74,7 +75,6 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
     print('running bootloader: ' + list2cmdline(args))
 
     with trio.fail_after(60 * 15):
-
         async with trio.subprocess.Process(args, stdout=trio.subprocess.PIPE, stderr=trio.subprocess.PIPE) as booty:
             async with trio.open_nursery() as nursery:
                 async def check_stdout():
@@ -82,9 +82,8 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                     lines = []
                     try:
                         while True:
-                            with trio.fail_after(15):
+                            with trio.fail_after(30):
                                 a_line = await line_generator.__anext__()
-                            print('got line: ' + a_line)
                             lines.append(a_line)
                     except trio.TooSlowError:
                         pytest.fail(f'booty became unresponsive after output {lines}')
@@ -106,14 +105,15 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                 nursery.start_soon(check_stdout)
                 nursery.start_soon(check_retcode)
 
-    async with open_first_possible_rover_device() as device:
+    async with ftdi_device_context() as device:
         await trio.sleep(15)
         o = OpenRoverProtocol(device)
-        await o.write(0, 0, 0, 10, 40)
+        await o.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
         with pytest.raises(trio.TooSlowError):
             with trio.fail_after(2):
-                k, version = await o.iter_packets().__anext__()
+                k, version = await o.read_one()
         assert k == 40
+        assert isinstance(version, OpenRoverFirmwareVersion)
         assert (version.major, version.minor, version.patch) == (1, 5, 0)
 
 

@@ -1,6 +1,4 @@
-from functools import partial
 import logging
-from typing import Callable, List
 import warnings
 
 import serial
@@ -8,8 +6,14 @@ import serial.tools
 import serial.tools.list_ports
 import trio
 
+from .util import OpenRoverException
+
 
 class OpenRoverWarning(RuntimeWarning):
+    pass
+
+
+class DeviceClosedException(serial.SerialException):
     pass
 
 
@@ -19,18 +23,29 @@ class SerialTrio(trio.abc.AsyncResource):
     _outbound_high_water: int = 8000
 
     def __init__(self, port, **serial_kwargs):
+        """Wrapper for pyserial that makes it work better with async"""
         self.port = port
         self.serial_kwargs = dict(write_timeout=0, inter_byte_timeout=None, timeout=0, **serial_kwargs)
         try:
             self._serial = serial.Serial(self.port, **self.serial_kwargs)
         except serial.SerialException as e:
             if 'FileNotFoundError' in e.args[0]:
-                raise RuntimeError("Could not connect to serial device - file not found. Is it connected?", self.port) from e
+                raise OpenRoverException("Could not connect to serial device - file not found. Is it connected?", self.port) from e
             if 'PermissionError' in e.args[0]:
-                raise RuntimeError("Could not connect to serial device - permission error. Is it open in another process? Does this user have OS permission?", self.port) from e
+                raise OpenRoverException("Could not connect to serial device - permission error. Is it open in another process? Does this user have OS permission?", self.port) from e
+            raise
+
+    @property
+    def in_waiting(self):
+        try:
+            return self._serial.in_waiting
+        except Exception as e:
+            if not self._serial.is_open:
+                raise DeviceClosedException from e
+            raise
 
     def _read_bytes_nowait(self, max):
-        if self._inbound_high_water <= self._serial.in_waiting:
+        if self._inbound_high_water <= self.in_waiting:
             warnings.warn(f'Incoming buffer is backlogged. Data may be lost. {self._serial.in_waiting} bytes')
         return self._serial.read(max)
 
@@ -65,29 +80,16 @@ class SerialTrio(trio.abc.AsyncResource):
             self._serial.cancel_write()
             raise
 
-    async def flush(self):
-        while self._serial.out_waiting:
+    async def flush(self, n_bytes=0):
+        """wait until the number of queued outgoing bytes is less than or equal to n_bytes"""
+        assert n_bytes >= 0
+        while self._serial.out_waiting > n_bytes:
             await trio.sleep(0.001)
 
     async def aclose(self):
         try:
-            while self._serial.out_waiting:
-                await trio.sleep(0.001)
+            if self._serial.is_open:
+                await self.flush()
         finally:
             self._serial.close()
             assert not self._serial.is_open
-
-
-def get_possible_rover_devices() -> List[Callable[[], SerialTrio]]:
-    ports = []
-    for comport in serial.tools.list_ports.comports():
-        if comport.manufacturer != 'FTDI':
-            continue
-        ports.append(comport.device)
-        DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, stopbits=1)
-    return [partial(SerialTrio, port, **DEFAULT_SERIAL_KWARGS) for port in ports]
-
-
-def open_first_possible_rover_device():
-    """use this as `async with open_first_possible_rover_device() as c:` """
-    return next(iter(get_possible_rover_devices()))()

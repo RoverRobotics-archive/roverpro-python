@@ -1,4 +1,4 @@
-from .openrover_data import FAN_SPEED_RESPONSE_FORMAT, MOTOR_EFFORT_FORMAT
+from openrover.openrover_data import FAN_SPEED_RESPONSE_FORMAT, MOTOR_EFFORT_FORMAT
 
 
 def test_fan_speed_format():

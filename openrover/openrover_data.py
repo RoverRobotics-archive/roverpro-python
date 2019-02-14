@@ -139,7 +139,7 @@ class DataFormatBatteryStatus(ReadDataFormat):
             initialized=bool(as_int & 0x0080),
             discharging=bool(as_int & 0x0040),
             fully_charged=bool(as_int & 0x0020),
-            fully_discharged=bool(as_int & 0x0010, )
+            fully_discharged=bool(as_int & 0x0010)
         )
 
     def description(self):
@@ -149,19 +149,6 @@ class DataFormatBatteryStatus(ReadDataFormat):
 class DriveMode(IntEnum):
     OPEN_LOOP = 0
     CLOSED_LOOP = 1
-
-
-class DataFormatDriveMode(ReadDataFormat):
-    python_type = DriveMode
-
-    def unpack(self, b: bytes):
-        return DriveMode(UINT16.unpack(b))
-
-    def pack(self, p: DriveMode):
-        return UINT16.pack(p.value)
-
-    def description(self):
-        return DriveMode.__doc__
 
 
 UINT16 = IntDataFormat(2, False)
@@ -191,12 +178,24 @@ class DataFormatFixedPrecision(ReadDataFormat, WriteDataFormat):
         return f'fractional (resolution=1/{self.step}, zero={self.zero}) stored as {self.base_type.description()}'
 
 
+class DataFormatDriveMode(ReadDataFormat):
+    python_type = DriveMode
+
+    def unpack(self, b: bytes):
+        return DriveMode(UINT16.unpack(b))
+
+    def pack(self, p: DriveMode):
+        return UINT16.pack(p.value)
+
+    def description(self):
+        return DriveMode.__doc__
+
+
 OLD_CURRENT_FORMAT = DataFormatFixedPrecision(UINT16, 34)
 
 SIGNED_MILLIS_FORMAT = DataFormatFixedPrecision(INT16, 1000)
 UNSIGNED_MILLIS_FORMAT = DataFormatFixedPrecision(UINT16, 1000)
 OLD_VOLTAGE_FORMAT = DataFormatFixedPrecision(UINT16, 58)
-FAN_SPEED_COMMAND_FORMAT = DataFormatFixedPrecision(UINT8, 240)
 FAN_SPEED_RESPONSE_FORMAT = DataFormatFixedPrecision(UINT16, 240)
 DECIKELVIN_FORMAT = DataFormatFixedPrecision(UINT16, 10, zero=2731.5)
 PERCENTAGE_FORMAT = DataFormatFixedPrecision(UINT16, 100)

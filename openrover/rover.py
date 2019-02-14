@@ -1,66 +1,63 @@
-from concurrent.futures import Future
-from typing import Any, Dict, Iterable, MutableMapping
+from contextlib import asynccontextmanager
+import logging
+from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
-from .openrover_protocol import OpenRoverProtocol
-from .serial_trio import open_first_possible_rover_device
+import trio
+
+from openrover.find_device import open_any_openrover_device
+from openrover.openrover_data import OPENROVER_DATA_ELEMENTS
+from .openrover_protocol import CommandVerbs, OpenRoverProtocol
+from .serial_trio import DeviceClosedException, SerialTrio
 from .util import OpenRoverException
 
 
-class OpenRover:
+@asynccontextmanager
+async def open_rover(path_to_serial: Optional[str] = None):
+    async with trio.open_nursery() as nursery:
+        if path_to_serial is None:
+            device_cxt = open_any_openrover_device()
+        else:
+            device_cxt = SerialTrio(path_to_serial)
+
+        async with device_cxt as device:
+            rover = Rover(nursery)
+            await rover.set_device(device)
+            yield rover
+
+
+class Rover:
     _motor_left = 0
     _motor_right = 0
     _motor_flipper = 0
-    _port = None
-    _next_data = None
+
+    _nursery = None
     _rover_protocol = None
+    _openrover_data_to_memory_channel: Mapping[int, Tuple[trio.abc.SendChannel, trio.abc.ReceiveChannel]]
 
-    def __init__(self, port=None):
-        """An OpenRover object """
-        raise NotImplementedError
-
+    def __init__(self, nursery):
+        """An OpenRover object"""
         self._motor_left = 0
         self._motor_right = 0
         self._motor_flipper = 0
-        self._port = port
-        self._next_data: MutableMapping[int, Future] = dict()
+        self._nursery = nursery
+        self._openrover_data_to_memory_channel = {i: trio.open_memory_channel(5) for i in OPENROVER_DATA_ELEMENTS.keys()}
 
-    async def aopen(self):
-        port = self._port
-        if port is None:
-            port = await open_first_possible_rover_device()
+    async def set_device(self, device: SerialTrio):
+        self._device = device
+        self._rover_protocol = OpenRoverProtocol(device)
+        self._nursery.start_soon(self.process_messages)
 
-        r, w = await self._connection.aopen()
-        self._rover_protocol = OpenRoverProtocol(r, w)
-
-    async def __aenter__(self):
-        await self.aopen()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.aclose()
-
-    async def process_data(self):
+    async def process_messages(self):
         try:
-            async for k, v in self._rover_protocol.iter_packets():
-                old_future = self._next_data.pop(k, None)
-                if old_future is None:
-                    raise RuntimeWarning('value was not expected %s: %s', k, v)
-                else:
-                    try:
-                        old_future.set_result(v)
-                    except InvalidStateError:
-                        pass
-        except Exception as e:
-            raise
-
-    async def consume_data(self, q):
-        while True:
-            key, value = await q.get()
-            self._next_data[key].set_result(value)
-
-    async def aclose(self):
-        self._process_data_task.cancel()
-        return await self._connection.aclose()
+            while True:
+                k, v = await self._rover_protocol.read_one()
+                try:
+                    snd, rcv = self._openrover_data_to_memory_channel[k]
+                    snd.send_nowait(v)
+                except Exception as e:
+                    logging.warning(f"could not handle incoming data {k}:{v} {e}")
+        except DeviceClosedException:
+            pass
 
     def set_motor_speeds(self, left, right, flipper):
         assert -1 <= left <= 1
@@ -70,58 +67,38 @@ class OpenRover:
         self._motor_right = right
         self._motor_flipper = flipper
 
-    async def send_command(self, arg1, arg2):
-        await self._rover_protocol.write(self._motor_left, self._motor_right, self._motor_flipper, arg1, arg2)
+    async def _send_command(self, cmd, arg):
+        await self._rover_protocol.write(self._motor_left, self._motor_right, self._motor_flipper, cmd, arg)
 
     async def send_speed(self):
-        await self.send_command(0, 0)
+        await self._send_command(CommandVerbs.NOP, 0)
 
     async def set_fan_speed(self, fan_speed):
-        await self.send_command(20, fan_speed)
+        assert 0 <= fan_speed <= 1
+        await self._send_command(CommandVerbs.SET_FAN_SPEED, int(fan_speed * 240))
 
     async def flipper_calibrate(self):
-        await self.send_command(250, 250)
-
-    def request_data(self, index):
-        self.send_command(10, index)
+        await self._send_command(CommandVerbs.FLIPPER_CALIBRATE, int(CommandVerbs.FLIPPER_CALIBRATE))
 
     async def get_data(self, index):
         """Get the next value for the given data index."""
-        old_future = self._next_data.get(index)
-        if old_future is not None:
-            old_future.cancel()
-
-        new_future = asyncio.get_event_loop().create_future()
-        self._next_data[index] = new_future
-        await asyncio.wait([self.send_command(10, index), new_future], timeout=1)
-        return await asyncio.wait_for(new_future, 1)
+        await self._send_command(CommandVerbs.GET_DATA, index)
+        send_channel, rcv_channel = self._openrover_data_to_memory_channel[index]
+        return await rcv_channel.receive()
 
     async def get_data_items(self, indices: Iterable[int]) -> Dict[int, Any]:
-        keys = list(set(indices))
-        futures = []
-        for i in keys:
-            old_future = self._next_data.get(i)
-            if old_future is not None:
-                old_future.cancel()
-            f = asyncio.get_event_loop().create_future()
-            self._next_data[i] = f
-            self.request_data(i)
-            futures.append(f)
-        values = await asyncio.wait_for(asyncio.gather(*futures), timeout=0.2)
-        return dict(zip(keys, values))
+        return {i: await self.get_data(i) for i in set(indices)}
 
 
 async def get_openrover_version(port):
-    async def get_openrover_version_untimed():
-        async with OpenRoverConnection(port, open_timeout=3) as (reader, writer):
-            protocol = OpenRoverProtocol(reader, writer)
-            await protocol.write(0, 0, 0, 10, 40)
-            async for k, v in protocol.iter_packets():
-                if k == 40:
-                    return v
-
     try:
-        version = await get_openrover_version_untimed()
-        return version
+        async with trio.fail_after(1):
+            async with SerialTrio(port) as device:
+                orp = OpenRoverProtocol(device)
+                while True:
+                    await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
+                    k, version = await orp.read_one()
+                    if k == 40:
+                        return version
     except Exception as e:
         raise OpenRoverException(f'Did not respond to request for OpenRover version') from e

@@ -5,33 +5,39 @@ import time
 import pytest
 import trio
 
-from .openrover_data import OpenRoverFirmwareVersion
-from .rover import OpenRover
-from .util import OpenRoverException
+from openrover import OpenRoverException
+from openrover.find_device import OpenRoverDeviceNotFoundException
+from openrover.openrover_data import OpenRoverFirmwareVersion
+from openrover.rover import Rover, open_rover
 
 
 @pytest.fixture
 async def rover():
-    async with OpenRover() as o:
-        yield o
+    try:
+        async with open_rover() as r:
+            yield r
+    except OpenRoverDeviceNotFoundException:
+        pytest.skip('This test requires a rover device but none was found')
 
 
 async def test_find_openrover(rover):
-    async with OpenRover() as o:
-        assert o.port is not None
-
-
-def test_create():
-    o = OpenRover()
-    assert o is not None
+    assert rover is not None
+    assert isinstance(rover, Rover)
 
 
 async def test_get_version(rover):
-    assert await rover.get_data(40) is not None
+    version = await rover.get_data(40)
+    assert isinstance(version, OpenRoverFirmwareVersion)
+
+    version2 = await rover.get_data(40)
+    assert version == version2
+    assert 0 <= version.major <= 100
+    assert 0 <= version.minor <= 100
+    assert 0 <= version.patch <= 100
 
 
 async def test_recover_from_bad_data(rover):
-    rover._rover_protocol._writer.write(b'test' * 20)
+    await rover._rover_protocol._serial.write(b'test' * 20)
 
     for i in range(3):
         try:
@@ -44,40 +50,26 @@ async def test_recover_from_bad_data(rover):
 
 
 async def test_missing_device():
-    rover = OpenRover(port='missingdevice')
     with pytest.raises(OpenRoverException):
-        try:
-            await rover.aopen()
-        except Exception as e:
-            raise
+        async with open_rover('missing_device'):
+            pass
 
 
-async def test_build_number():
-    async with OpenRover() as rover:
-        build_no = await rover.get_data(40)
-        assert build_no is not None
-        assert isinstance(build_no, OpenRoverFirmwareVersion)
-        assert 0 <= build_no.major < 100
-        assert 0 <= build_no.minor < 100
-        assert 0 <= build_no.patch < 100
+async def test_encoder_counts(rover):
+    enc_counts_1 = (await rover.get_data(14), await rover.get_data(16))
+    await trio.sleep(0.3)
+    enc_counts_2 = (await rover.get_data(14), await rover.get_data(16))
+    assert enc_counts_1 == enc_counts_2
 
+    rover.set_motor_speeds(0.2, 0.2, 0.2)
+    rover.send_speed()
+    await trio.sleep(0.3)
 
-async def test_encoder_counts():
-    async with OpenRover() as rover:
-        enc_counts_1 = (await rover.get_data(14), await rover.get_data(16))
-        await trio.sleep(0.3)
-        enc_counts_2 = (await rover.get_data(14), await rover.get_data(16))
-        assert enc_counts_1 == enc_counts_2
-
-        rover.set_motor_speeds(0.2, 0.2, 0.2)
-        rover.send_speed()
-        await trio.sleep(0.3)
-
-        enc_counts_3 = (await rover.get_data(14), await rover.get_data(16))
-        enc_diff = ((enc_counts_3[0] - enc_counts_2[0]) % (2 ** 16),
-                    (enc_counts_3[1] - enc_counts_2[1]) % 2 ** 16)
-        assert 0 < enc_diff[0] < 200
-        assert 0 < enc_diff[1] < 200
+    enc_counts_3 = (await rover.get_data(14), await rover.get_data(16))
+    enc_diff = ((enc_counts_3[0] - enc_counts_2[0]) % (2 ** 16),
+                (enc_counts_3[1] - enc_counts_2[1]) % 2 ** 16)
+    assert 0 < enc_diff[0] < 200
+    assert 0 < enc_diff[1] < 200
 
 
 async def test_encoder_intervals_still(rover):
@@ -126,7 +118,7 @@ async def test_encoder_intervals_forward(rover):
 
     for i in range(20):
         rover.send_speed()
-        time.sleep(0.1)
+        time.sleep(0.2)
         enc_counts_left.append(await rover.get_data(14))
         enc_counts_right.append(await rover.get_data(16))
         enc_intervals_left.append(await rover.get_data(28))
@@ -141,10 +133,12 @@ async def test_encoder_intervals_forward(rover):
 
 
 async def test_fan_speed(rover):
-    for i in range(0, 241, 20):
-        rover.set_fan_speed(i)
+    for i in range(10):
+        fan_speed_cmd = i / 10
+        await rover.set_fan_speed(fan_speed_cmd)
         await trio.sleep(0.1)
-        assert i == await rover.get_data(48)
+        fan_speed_fb = await rover.get_data(48)
+        assert isclose(fan_speed_cmd, fan_speed_fb, abs_tol=0.03)
 
 
 async def test_encoder_intervals_backward(rover):
