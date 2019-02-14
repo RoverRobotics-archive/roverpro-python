@@ -1,6 +1,5 @@
 from math import isclose
 import statistics
-import time
 
 import pytest
 import trio
@@ -118,7 +117,7 @@ async def test_encoder_intervals_forward(rover):
 
     for i in range(20):
         rover.send_speed()
-        time.sleep(0.2)
+        await trio.sleep(0.2)
         enc_counts_left.append(await rover.get_data(14))
         enc_counts_right.append(await rover.get_data(16))
         enc_intervals_left.append(await rover.get_data(28))

@@ -34,15 +34,15 @@ async def test_protocol_writes_then_reads():
         async with trio.open_nursery() as nursery:
             for i in range(n):
                 nursery.start_soon(protocol.write, 0, 0, 0, CommandVerbs.GET_DATA, 40)
+            for i in range(n):
                 try:
-                    for i in range(n):
-                        with trio.fail_after(1):
-                            key, version = await protocol.read_one()
-                            assert key == 40
-                            assert isinstance(version, OpenRoverFirmwareVersion)
-                            assert isinstance(version.value, int)
-                            assert 0 < version.value
-                            n_received += 1
+                    with trio.fail_after(1):
+                        key, version = await protocol.read_one()
+                        assert key == 40
+                        assert isinstance(version, OpenRoverFirmwareVersion)
+                        assert isinstance(version.value, int)
+                        assert 0 < version.value
+                        n_received += 1
                 except trio.TooSlowError:
                     pass
 

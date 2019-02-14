@@ -1,6 +1,6 @@
-from contextlib import asynccontextmanager
 from typing import Iterable, Sequence, Tuple
 
+from async_generator import asynccontextmanager
 from serial.tools.list_ports import comports
 import trio
 
@@ -50,6 +50,7 @@ async def get_openrover_protocol_version(device: SerialTrio):
 
 @asynccontextmanager
 async def open_any_openrover_device():
+    """Enumerates serial devices until it finds on ethat responds to a request for OpenRover version. Returns that device"""
     exc_args = []
     for port in get_ftdi_device_paths():
         async with SerialTrio(port, **DEFAULT_SERIAL_KWARGS) as device:

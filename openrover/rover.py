@@ -1,7 +1,7 @@
-from contextlib import asynccontextmanager
 import logging
 from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 
+from async_generator import asynccontextmanager
 import trio
 
 from openrover.find_device import open_any_openrover_device

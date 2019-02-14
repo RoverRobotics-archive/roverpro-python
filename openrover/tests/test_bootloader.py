@@ -6,11 +6,18 @@ import pytest
 import trio
 
 import openrover
-from openrover import ftdi_device_context
+from openrover.find_device import OpenRoverDeviceNotFoundException, open_any_openrover_device
 from openrover.openrover_data import OpenRoverFirmwareVersion
 from openrover.openrover_protocol import CommandVerbs, OpenRoverProtocol
 
-device = pytest.fixture(ftdi_device_context)
+
+@pytest.fixture
+async def device():
+    try:
+        async with open_any_openrover_device() as dev:
+            yield dev
+    except OpenRoverDeviceNotFoundException:
+        pytest.skip('No openrover device found')
 
 
 @pytest.fixture
@@ -22,7 +29,10 @@ def powerboard_firmware_file():
 
 @pytest.fixture
 def booty_exe():
-    p = Path(shutil.which('booty'))
+    maybe_booty = shutil.which('booty')
+    if maybe_booty is None:
+        pytest.skip('Could not test bootloader. Booty executable does not exist or is not in the executable path.')
+    p = Path(maybe_booty)
     assert p.is_file()
     return p
 
@@ -30,14 +40,6 @@ def booty_exe():
 async def test_reboot(device):
     orp = OpenRoverProtocol(device)
     # set a long timeout in case rover is already in bootloader
-
-    try:
-        with trio.fail_after(2):
-            await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
-            i, version = await orp.read_one()
-            assert i == 40
-    except trio.TooSlowError:
-        pytest.fail('Rover did not respond. does it have firmware?')
 
     try:
         await orp.write(0, 0, 0, CommandVerbs.RESTART, 0)  # reboot the device
@@ -52,14 +54,13 @@ async def test_reboot(device):
         await trio.sleep(10)
 
 
-async def test_bootloader(powerboard_firmware_file, booty_exe):
+async def test_bootloader(powerboard_firmware_file, booty_exe, device):
     # note this test can take a loooong time
 
     with trio.fail_after(1):
-        async with ftdi_device_context() as device:
-            o = OpenRoverProtocol(device)
-            await o.write(0, 0, 0, CommandVerbs.RESTART, 0)
-            port = device.port
+        o = OpenRoverProtocol(device)
+        await o.write(0, 0, 0, CommandVerbs.RESTART, 0)
+        port = device.port
 
     # flash rover firmware
     args = [
