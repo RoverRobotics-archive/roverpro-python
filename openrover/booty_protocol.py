@@ -1,11 +1,12 @@
-import asyncio
-from asyncio import StreamWriter, StreamReader
 from enum import IntEnum
 import logging
 import struct
 from typing import Any, Tuple
 
 from dataclasses import dataclass
+import trio
+
+from openrover.serial_trio import SerialTrio
 
 _START_OF_FRAME = 0xf7
 _END_OF_FRAME = 0x7f
@@ -47,35 +48,34 @@ class BootyDeviceMetadata():
 
 
 class BootyProtocol:
-    _stream_reader: asyncio.StreamReader = None
     _process_packets_task = None
 
-    def __init__(self, reader: StreamReader, writer: StreamWriter):
-        self._queue = asyncio.Queue()
-        self._reader = reader
-        self._writer = writer
+    def __init__(self, serial: SerialTrio):
+        self._serial = serial
+        # responses from the robot
+        self._queue = trio.Queue()
 
     # region Booty Protocol actions
     async def get_device_metadata(self):
-        platform = asyncio.ensure_future(self._cmd_request_data(BootyCommand.READ_PLATFORM))
-        version = asyncio.ensure_future(self._cmd_request_data(BootyCommand.READ_VERSION))
-        row_len = asyncio.ensure_future(self._cmd_request_data(BootyCommand.READ_ROW_LEN))
-        page_len = asyncio.ensure_future(self._cmd_request_data(BootyCommand.READ_PAGE_LEN))
-        prog_len = asyncio.ensure_future(self._cmd_request_data(BootyCommand.READ_PROG_LEN))
-        max_prog_size = asyncio.ensure_future(self._cmd_request_data(BootyCommand.READ_MAX_PROG_SIZE))
-        app_start_address = asyncio.ensure_future(self._cmd_request_data(BootyCommand.READ_APP_START_ADDRESS))
-        boot_start_address = asyncio.ensure_future(self._cmd_request_data(BootyCommand.READ_BOOT_START_ADDRESS))
-        await asyncio.wait([platform, version, row_len, page_len, prog_len, max_prog_size, app_start_address, boot_start_address], timeout=2)
-        metadata = BootyDeviceMetadata(
-            platform=platform.result(),
-            version=version.result(),
-            row_len=row_len.result(),
-            page_len=page_len.result(),
-            prog_len=prog_len.result(),
-            max_prog_size=max_prog_size.result(),
-            app_start_address=app_start_address.result(),
-            boot_start_address=boot_start_address.result()
-        )
+        with trio.open_nursery() as nursery:
+            platform = self._cmd_request_data(BootyCommand.READ_PLATFORM)
+            version = self._cmd_request_data(BootyCommand.READ_VERSION)
+            row_len = self._cmd_request_data(BootyCommand.READ_ROW_LEN)
+            page_len = self._cmd_request_data(BootyCommand.READ_PAGE_LEN)
+            prog_len = self._cmd_request_data(BootyCommand.READ_PROG_LEN)
+            max_prog_size = self._cmd_request_data(BootyCommand.READ_MAX_PROG_SIZE)
+            app_start_address = self._cmd_request_data(BootyCommand.READ_APP_START_ADDRESS)
+            boot_start_address = self._cmd_request_data(BootyCommand.READ_BOOT_START_ADDRESS)
+            metadata = BootyDeviceMetadata(
+                platform=await platform,
+                version=await version,
+                row_len=await row_len,
+                page_len=await page_len,
+                prog_len=await prog_len,
+                max_prog_size=await max_prog_size,
+                app_start_address=await app_start_address,
+                boot_start_address=await boot_start_address,
+            )
 
         logging.info(f'Platform metadata = {metadata}')
         return metadata
@@ -150,7 +150,7 @@ class BootyProtocol:
                 message.append(c)
         return bytes(message)
 
-    async def _cmd_request_data(self, verb: BootyCommand) -> asyncio.Future:
+    async def _cmd_request_data(self, verb: BootyCommand):
         assert verb in [BootyCommand.READ_PLATFORM, BootyCommand.READ_VERSION, BootyCommand.READ_ROW_LEN, BootyCommand.READ_PAGE_LEN, BootyCommand.READ_PROG_LEN, BootyCommand.READ_MAX_PROG_SIZE,
                         BootyCommand.READ_APP_START_ADDRESS, BootyCommand.READ_BOOT_START_ADDRESS]
         await self._cmd_write(verb)

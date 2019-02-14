@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Upload to PyPI" type="PythonConfigurationType" factoryName="Python" editBeforeRun="true">
+  <configuration default="false" name="Upload to PyPI" type="PythonConfigurationType" factoryName="Python">
     <module name="OpenRover Python Driver" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
