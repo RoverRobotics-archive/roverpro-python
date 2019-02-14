@@ -1,9 +1,9 @@
-from dataclasses import dataclass
 from enum import IntEnum
 import logging
 import struct
 from typing import Any, Tuple
 
+from dataclasses import dataclass
 import trio
 
 from openrover.serial_trio import SerialTrio
