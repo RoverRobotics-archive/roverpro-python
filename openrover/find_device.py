@@ -1,10 +1,12 @@
-from typing import Iterable, Sequence, Tuple
+from typing import AsyncContextManager, Awaitable, Optional, Sequence
 
 from async_generator import asynccontextmanager
 from serial.tools.list_ports import comports
 import trio
 
+from openrover.openrover_data import OpenRoverFirmwareVersion
 from openrover.serial_trio import SerialTrio
+from openrover.util import RoverDeviceNotFound
 from .openrover_protocol import CommandVerbs, OpenRoverProtocol
 from .util import OpenRoverException
 
@@ -27,13 +29,7 @@ def ftdi_device_context() -> SerialTrio:
     return SerialTrio(port, **DEFAULT_SERIAL_KWARGS)
 
 
-class OpenRoverDeviceNotFoundException(OpenRoverException):
-    def __init__(self, devices_and_failures: Iterable[Tuple[str, Exception]]):
-        self.devices_and_failures = devices_and_failures
-        super().__init__()
-
-
-async def get_openrover_protocol_version(device: SerialTrio):
+async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRoverFirmwareVersion]:
     try:
         with trio.fail_after(1):
             orp = OpenRoverProtocol(device)
@@ -49,10 +45,14 @@ async def get_openrover_protocol_version(device: SerialTrio):
 
 
 @asynccontextmanager
-async def open_any_openrover_device():
-    """Enumerates serial devices until it finds on ethat responds to a request for OpenRover version. Returns that device"""
+async def open_rover_device(*ports_to_try: Optional[str]) -> AsyncContextManager[SerialTrio]:
+    """
+    Enumerates serial devices until it finds one that responds to a request for OpenRover version. Returns that device.
+    :param ports_to_try: if provided, the devices to attempt to open (e.g. 'COM3'). Otherwise, all FTDI devices will be attempted
+    :return: A SerialTrio device to use as a rover. If no appropriate device is found, will raise a RoverDeviceNotFound exception
+    """
     exc_args = []
-    for port in get_ftdi_device_paths():
+    for port in ports_to_try or get_ftdi_device_paths():
         async with SerialTrio(port, **DEFAULT_SERIAL_KWARGS) as device:
             try:
                 await get_openrover_protocol_version(device)
@@ -60,4 +60,4 @@ async def open_any_openrover_device():
                 return
             except Exception as e:
                 exc_args.append((port, e))
-    raise OpenRoverDeviceNotFoundException(exc_args)
+    raise RoverDeviceNotFound(exc_args)

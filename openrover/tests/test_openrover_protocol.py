@@ -1,6 +1,6 @@
 import trio
 
-from openrover.find_device import open_any_openrover_device
+from openrover.find_device import open_rover_device
 from openrover.openrover_data import OpenRoverFirmwareVersion
 from openrover.openrover_protocol import CommandVerbs, OpenRoverProtocol
 
@@ -9,7 +9,7 @@ n = 100
 
 async def test_protocol_write_read_immediate():
     n_received = 0
-    async with open_any_openrover_device() as device:
+    async with open_rover_device() as device:
         protocol = OpenRoverProtocol(device)
         for i in range(n):
             with trio.fail_after(1):
@@ -28,7 +28,7 @@ async def test_protocol_write_read_immediate():
 async def test_protocol_writes_then_reads():
     n_received = 0
 
-    async with open_any_openrover_device() as device:
+    async with open_rover_device() as device:
         protocol = OpenRoverProtocol(device)
 
         async with trio.open_nursery() as nursery:

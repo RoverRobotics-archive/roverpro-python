@@ -273,3 +273,12 @@ def doc():
 
 if __name__ == '__main__':
     print(doc())
+
+
+def fix_encoder_delta(delta):
+    MAX_ENCODER = 2 ** 16
+    delta %= MAX_ENCODER
+    if delta < MAX_ENCODER / 2:
+        return delta
+    else:
+        return delta - MAX_ENCODER

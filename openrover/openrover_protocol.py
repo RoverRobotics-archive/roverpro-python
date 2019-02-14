@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Tuple
+from typing import Any, Tuple
 
 import trio
 
@@ -35,17 +35,23 @@ class OpenRoverProtocol:
         # A packet involves multiple read operations, so we must lock the device for reading
         self._read_lock = trio.StrictFIFOLock()
 
-    async def read_one(self) -> Tuple[int, bytes]:
+    async def read_one_raw(self) -> bytes:
         async with self._read_lock:
             _ = await self._serial.read_until(SERIAL_START_BYTE)
             packet = SERIAL_START_BYTE + await self._serial.read_exactly(4)
             assert len(packet) == 5
             if packet[4] == checksum(packet[1:4]):
-                k = packet[1]
-                v = OPENROVER_DATA_ELEMENTS[k].data_format.unpack(packet[2:4])
-                return (k, v)
+                return packet[1:4]
             else:
                 raise OpenRoverException('Bad checksum. Discarding data ' + repr(packet))
+
+    async def read_one(self) -> Tuple[int, Any]:
+        """Get a strongly typed version of the data"""
+        raw_data = await self.read_one_raw()
+        data_element_index = raw_data[0]
+        element_descriptor = OPENROVER_DATA_ELEMENTS[data_element_index]
+        data_element_value = element_descriptor.data_format.unpack(raw_data[1:])
+        return data_element_index, data_element_value
 
     async def write(self, motor_left: float, motor_right: float, flipper: float, command_verb: CommandVerbs, command_arg: int):
         binary = encode_packet(MOTOR_EFFORT_FORMAT.pack(motor_left),

@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
 from async_generator import asynccontextmanager
 import trio
 
-from openrover.find_device import open_any_openrover_device
+from openrover.find_device import open_rover_device
 from openrover.openrover_data import OPENROVER_DATA_ELEMENTS
 from .openrover_protocol import CommandVerbs, OpenRoverProtocol
 from .serial_trio import DeviceClosedException, SerialTrio
@@ -15,7 +15,7 @@ from .util import OpenRoverException
 async def open_rover(path_to_serial: Optional[str] = None):
     async with trio.open_nursery() as nursery:
         if path_to_serial is None:
-            device_cxt = open_any_openrover_device()
+            device_cxt = open_rover_device()
         else:
             device_cxt = SerialTrio(path_to_serial)
 
@@ -40,7 +40,7 @@ class Rover:
         self._motor_right = 0
         self._motor_flipper = 0
         self._nursery = nursery
-        self._openrover_data_to_memory_channel = {i: trio.open_memory_channel(5) for i in OPENROVER_DATA_ELEMENTS.keys()}
+        self._openrover_data_to_memory_channel = {i: trio.open_memory_channel(0) for i in OPENROVER_DATA_ELEMENTS.keys()}
 
     async def set_device(self, device: SerialTrio):
         self._device = device
@@ -80,8 +80,9 @@ class Rover:
     async def flipper_calibrate(self):
         await self._send_command(CommandVerbs.FLIPPER_CALIBRATE, int(CommandVerbs.FLIPPER_CALIBRATE))
 
-    async def get_data(self, index):
-        """Get the next value for the given data index."""
+    async def get_data(self, index) -> Any:
+        """Get the next value for the given data index.
+        The type of the returned value depends on the index passed."""
         await self._send_command(CommandVerbs.GET_DATA, index)
         send_channel, rcv_channel = self._openrover_data_to_memory_channel[index]
         return await rcv_channel.receive()

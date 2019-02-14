@@ -5,9 +5,9 @@ import pytest
 import trio
 
 from openrover import OpenRoverException
-from openrover.find_device import OpenRoverDeviceNotFoundException
-from openrover.openrover_data import OpenRoverFirmwareVersion
+from openrover.openrover_data import OpenRoverFirmwareVersion, fix_encoder_delta
 from openrover.rover import Rover, open_rover
+from openrover.util import RoverDeviceNotFound
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ async def rover():
     try:
         async with open_rover() as r:
             yield r
-    except OpenRoverDeviceNotFoundException:
+    except RoverDeviceNotFound:
         pytest.skip('This test requires a rover device but none was found')
 
 
@@ -54,83 +54,6 @@ async def test_missing_device():
             pass
 
 
-async def test_encoder_counts(rover):
-    enc_counts_1 = (await rover.get_data(14), await rover.get_data(16))
-    await trio.sleep(0.3)
-    enc_counts_2 = (await rover.get_data(14), await rover.get_data(16))
-    assert enc_counts_1 == enc_counts_2
-
-    rover.set_motor_speeds(0.2, 0.2, 0.2)
-    rover.send_speed()
-    await trio.sleep(0.3)
-
-    enc_counts_3 = (await rover.get_data(14), await rover.get_data(16))
-    enc_diff = ((enc_counts_3[0] - enc_counts_2[0]) % (2 ** 16),
-                (enc_counts_3[1] - enc_counts_2[1]) % 2 ** 16)
-    assert 0 < enc_diff[0] < 200
-    assert 0 < enc_diff[1] < 200
-
-
-async def test_encoder_intervals_still(rover):
-    await trio.sleep(2)
-    enc_counts_left = []
-    enc_counts_right = []
-    enc_intervals_left = []
-    enc_intervals_right = []
-    rover.set_motor_speeds(0, 0, 0)
-
-    for i in range(5):
-        rover.send_speed()
-        await trio.sleep(0.1)
-        enc_counts_left.append(await rover.get_data(14))
-        enc_counts_right.append(await rover.get_data(16))
-        enc_intervals_left.append(await rover.get_data(28))
-        enc_intervals_right.append(await rover.get_data(30))
-
-    assert constant(enc_counts_left)
-    assert constant(enc_counts_right)
-    for i in enc_intervals_left:
-        assert i == 0
-    for i in enc_intervals_right:
-        assert i == 0
-
-
-def constant(L):
-    return all(x == y for x, y in zip(L, L[1:]))
-
-
-def strictly_increasing(L):
-    return all(x < y for x, y in zip(L, L[1:]))
-
-
-def strictly_decreasing(L):
-    return all(x > y for x, y in zip(L, L[1:]))
-
-
-async def test_encoder_intervals_forward(rover):
-    enc_counts_left = []
-    enc_counts_right = []
-    enc_intervals_left = []
-    enc_intervals_right = []
-
-    rover.set_motor_speeds(0.1, 0.1, 0)
-
-    for i in range(20):
-        rover.send_speed()
-        await trio.sleep(0.2)
-        enc_counts_left.append(await rover.get_data(14))
-        enc_counts_right.append(await rover.get_data(16))
-        enc_intervals_left.append(await rover.get_data(28))
-        enc_intervals_right.append(await rover.get_data(30))
-
-    # note this test may fail if the rover wheels have any significant resistance, since this may cause the motors to "kick" backwards
-    assert strictly_increasing(enc_counts_left)
-    assert strictly_increasing(enc_counts_right)
-
-    assert 0 < statistics.mean(enc_intervals_left) < 50000
-    assert 0.001 < statistics.stdev(enc_intervals_left) < statistics.mean(enc_intervals_left) * 0.1
-
-
 async def test_fan_speed(rover):
     for i in range(10):
         fan_speed_cmd = i / 10
@@ -140,16 +63,21 @@ async def test_fan_speed(rover):
         assert isclose(fan_speed_cmd, fan_speed_fb, abs_tol=0.03)
 
 
-async def test_encoder_intervals_backward(rover):
+@pytest.mark.parametrize('motor_effort', [-0.5, -0.1, 0, +0.1, +0.5])
+async def test_encoder_intervals(rover, motor_effort):
     enc_counts_left = []
     enc_counts_right = []
     enc_intervals_left = []
     enc_intervals_right = []
 
-    rover.set_motor_speeds(-0.1, -0.1, 0)
+    rover.set_motor_speeds(motor_effort, motor_effort, 0)
 
-    for i in range(20):
-        rover.send_speed()
+    for i in range(3):
+        await rover.send_speed()
+        await trio.sleep(0.1)
+
+    for i in range(10):
+        await rover.send_speed()
         await trio.sleep(0.1)
         data = await rover.get_data_items([14, 16, 28, 30])
         enc_counts_left.append(data[14])
@@ -157,12 +85,22 @@ async def test_encoder_intervals_backward(rover):
         enc_intervals_left.append(data[28])
         enc_intervals_right.append(data[30])
 
-    # note this test may fail if the rover wheels have any significant resistance, since this may cause the motors to "kick" backwards
-    assert strictly_decreasing(enc_counts_left)
-    assert strictly_decreasing(enc_counts_right)
+    encoder_delta_left = [fix_encoder_delta(a - b) for a, b in zip(enc_counts_left[1:], enc_counts_left)]
+    encoder_delta_right = [fix_encoder_delta(a - b) for a, b in zip(enc_counts_right[1:], enc_counts_right)]
 
-    assert 0 < statistics.mean(enc_intervals_left) < 50000
-    assert 0.001 < statistics.stdev(enc_intervals_left) < statistics.mean(enc_intervals_left) * 0.1
+    if motor_effort == 0:
+        assert all(i == 0 for i in encoder_delta_left)
+        assert all(i == 0 for i in encoder_delta_right)
+
+        assert all(i == 0 or i > 500 for i in enc_intervals_left)
+        assert all(i == 0 or i > 500 for i in enc_intervals_right)
+
+    else:
+        assert all(20 < i / motor_effort < 500 for i in encoder_delta_left)
+        assert all(20 < i / motor_effort < 500 for i in encoder_delta_right)
+
+        assert 0.005 < (1 / statistics.mean(enc_intervals_left)) / abs(motor_effort) < 0.05
+        assert 0.005 < (1 / statistics.mean(enc_intervals_right)) / abs(motor_effort) < 0.05
 
 
 async def test_currents(rover):
@@ -176,7 +114,7 @@ async def test_currents(rover):
     assert isclose(battery_current_b, abs(battery_current_b_i2c), rel_tol=0.05, abs_tol=0.2)
 
     battery_current_total = await rover.get_data(0)
-    assert isclose(battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=.05)
+    assert isclose(battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=0.2)
 
 
 async def test_soc(rover):

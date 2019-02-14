@@ -6,17 +6,18 @@ import pytest
 import trio
 
 import openrover
-from openrover.find_device import OpenRoverDeviceNotFoundException, open_any_openrover_device
+from openrover.find_device import open_rover_device
 from openrover.openrover_data import OpenRoverFirmwareVersion
 from openrover.openrover_protocol import CommandVerbs, OpenRoverProtocol
+from openrover.util import RoverDeviceNotFound
 
 
 @pytest.fixture
 async def device():
     try:
-        async with open_any_openrover_device() as dev:
+        async with open_rover_device() as dev:
             yield dev
-    except OpenRoverDeviceNotFoundException:
+    except RoverDeviceNotFound:
         pytest.skip('No openrover device found')
 
 
@@ -106,16 +107,15 @@ async def test_bootloader(powerboard_firmware_file, booty_exe, device):
                 nursery.start_soon(check_stdout)
                 nursery.start_soon(check_retcode)
 
-    async with ftdi_device_context() as device:
-        await trio.sleep(15)
-        o = OpenRoverProtocol(device)
-        await o.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
-        with pytest.raises(trio.TooSlowError):
-            with trio.fail_after(2):
-                k, version = await o.read_one()
-        assert k == 40
-        assert isinstance(version, OpenRoverFirmwareVersion)
-        assert (version.major, version.minor, version.patch) == (1, 5, 0)
+    await trio.sleep(15)
+    o = OpenRoverProtocol(device)
+    await o.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
+    with pytest.raises(trio.TooSlowError):
+        with trio.fail_after(2):
+            k, version = await o.read_one()
+    assert k == 40
+    assert isinstance(version, OpenRoverFirmwareVersion)
+    assert (version.major, version.minor, version.patch) == (1, 5, 0)
 
 
 async def stream_to_string(stream: trio.abc.ReceiveStream):
