@@ -63,7 +63,7 @@ async def test_fan_speed(rover):
         assert isclose(fan_speed_cmd, fan_speed_fb, abs_tol=0.03)
 
 
-@pytest.mark.parametrize('motor_effort', [-0.5, -0.1, 0, +0.1, +0.5])
+@pytest.mark.parametrize('motor_effort', [0, -0.1, +0.1, -0.2, +0.2])
 async def test_encoder_intervals(rover, motor_effort):
     enc_counts_left = []
     enc_counts_right = []

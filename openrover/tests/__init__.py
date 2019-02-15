@@ -1,8 +1,4 @@
 import pytest
-from pytest_trio import enable_trio_mode
-
-# if installing from an egg, the pytest.ini function may not exist
-assert enable_trio_mode is not None
 
 
 def main():
