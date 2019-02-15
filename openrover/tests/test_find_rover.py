@@ -14,8 +14,6 @@ async def test_open_any_openrover_device():
     if len(get_ftdi_device_paths()) == 0:
         pytest.skip('no FTDI devices found')
 
-    assert isinstance(open_rover_device(), AsyncContextManager)
-
     async with open_rover_device() as device:
         assert isinstance(device, SerialTrio)
         # the device must still be open here

@@ -61,6 +61,9 @@ class OpenRoverFirmwareVersion:
         if self.value == 0:
             raise OpenRoverException('invalid version number %s', self.value)
 
+    def __str__(self):
+        return f'{self.major}.{self.minor}.{self.patch}'
+
     @property
     def major(self):
         if self.value == OPENROVER_LEGACY_VERSION:
