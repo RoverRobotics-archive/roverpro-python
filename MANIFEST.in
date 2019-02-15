@@ -1,0 +1,3 @@
+recursive-include openrover/tests/resources *
+prune .idea
+prune Pipfile

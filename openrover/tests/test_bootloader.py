@@ -45,15 +45,26 @@ async def test_reboot(device):
     # set a long timeout in case rover is already in bootloader
 
     try:
-        await orp.write(0, 0, 0, CommandVerbs.RESTART, 0)  # reboot the device
+        # reboot the device
+        await orp.write(0, 0, 0, CommandVerbs.RESTART, 0)
+
+        # check that the device did turn off
         await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
         with pytest.raises(trio.TooSlowError):
             with trio.fail_after(1):
                 await orp.read_one()
 
-    finally:
-        await trio.sleep(20)
-    # need to wait for device to come back up
+        # check that the device comes back up and starts responding to request for version
+        with trio.fail_after(30):
+            while True:
+                with trio.move_on_after(1):
+                    await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
+                    k, v = await orp.read_one()
+                    if k == 40:
+                        return
+    except:
+        await trio.sleep(30)
+        raise
 
 
 def mark_dangerous_test(reason):
@@ -112,18 +123,14 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                 nursery.start_soon(check_stdout)
                 nursery.start_soon(check_retcode)
 
-    for i in range(10):
-        try:
-            async with open_rover_device(port):
-                orp = OpenRoverProtocol(device)
+    with trio.fail_after(30):
+        while True:
+            with trio.move_on_after(1):
                 await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
-                with trio.fail_after(3):
-                    k, version = await orp.read_one()
+                k, version = await orp.read_one()
                 assert k == 40
                 assert isinstance(version, OpenRoverFirmwareVersion)
                 assert (version.major, version.minor, version.patch) == (1, 5, 0)
-        except Exception as e:
-            pass
 
 
 async def stream_to_string(stream: trio.abc.ReceiveStream):

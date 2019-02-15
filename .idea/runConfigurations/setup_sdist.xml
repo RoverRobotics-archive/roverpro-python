@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="setup sdist bdist" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="setup sdist" type="PythonConfigurationType" factoryName="Python">
     <module name="OpenRover Python Driver" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/setup.py" />
-    <option name="PARAMETERS" value="sdist bdist_egg" />
+    <option name="PARAMETERS" value="sdist" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="true" />
     <option name="MODULE_MODE" value="false" />
