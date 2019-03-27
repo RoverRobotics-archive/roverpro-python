@@ -5,9 +5,9 @@ from openrover.find_device import *
 
 def test_ftdi_device_paths():
     d = get_ftdi_device_paths()
-    for i in d:
-        assert isinstance(i, str)
-        assert i != ''
+    for name in d:
+        assert isinstance(name, str)
+        assert name != ''
 
 
 async def test_open_any_openrover_device():

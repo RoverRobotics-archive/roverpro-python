@@ -54,13 +54,36 @@ async def test_missing_device():
             pass
 
 
+async def test_fan_speed_timeout(rover):
+    fan_speed_cmd = 0.5
+
+    rover.set_fan_speed(fan_speed_cmd)
+    assert await rover.get_data(48) == fan_speed_cmd
+
+    await trio.sleep(1)
+    assert await rover.get_data(48) == 0
+
+
 async def test_fan_speed(rover):
-    for i in range(10):
-        fan_speed_cmd = i / 10
-        await rover.set_fan_speed(fan_speed_cmd)
-        await trio.sleep(0.1)
-        fan_speed_fb = await rover.get_data(48)
-        assert isclose(fan_speed_cmd, fan_speed_fb, abs_tol=0.03)
+    gradations = 50
+    for i in range(gradations + 1):
+        fan_speed_cmd = i / gradations
+        rover.set_fan_speed(fan_speed_cmd)
+        got_fan_speed = await rover.get_data(48)
+        assert got_fan_speed == pytest.approx(fan_speed_cmd, abs=0.1)
+
+
+import openrover.openrover_data
+
+
+async def test_get_all_data_elements(rover):
+    for i, de in openrover.openrover_data.OPENROVER_DATA_ELEMENTS.items():
+        try:
+            if not de.not_implemented:
+                v = await rover.get_data(i)
+                assert v is not None
+        except Exception as e:
+            raise
 
 
 @pytest.mark.parametrize('motor_effort', [0, -0.1, +0.1, -0.2, +0.2])
@@ -72,12 +95,12 @@ async def test_encoder_intervals(rover, motor_effort):
 
     rover.set_motor_speeds(motor_effort, motor_effort, 0)
 
-    for i in range(3):
-        await rover.send_speed()
+    for _ in range(3):
+        rover.send_speed()
         await trio.sleep(0.1)
 
-    for i in range(10):
-        await rover.send_speed()
+    for _ in range(10):
+        rover.send_speed()
         await trio.sleep(0.1)
         data = await rover.get_data_items([14, 16, 28, 30])
         enc_counts_left.append(data[14])
@@ -94,7 +117,6 @@ async def test_encoder_intervals(rover, motor_effort):
 
         assert all(i == 0 or i > 500 for i in enc_intervals_left)
         assert all(i == 0 or i > 500 for i in enc_intervals_right)
-
     else:
         assert all(20 < i / motor_effort < 500 for i in encoder_delta_left)
         assert all(20 < i / motor_effort < 500 for i in encoder_delta_right)
@@ -104,6 +126,7 @@ async def test_encoder_intervals(rover, motor_effort):
 
 
 async def test_currents(rover):
+    await trio.sleep(3)
     battery_current_a = await rover.get_data(42)
     battery_current_b = await rover.get_data(44)
     battery_current_a_i2c = await rover.get_data(68)

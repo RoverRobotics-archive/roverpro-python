@@ -14,19 +14,7 @@ DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, stopbits=1)
 
 
 def get_ftdi_device_paths() -> Sequence[str]:
-    ports = []
-    for comport in comports():
-        if comport.manufacturer != 'FTDI':
-            continue
-        ports.append(comport.device)
-
-    return ports
-
-
-def ftdi_device_context() -> SerialTrio:
-    """use this as `async with ftdi_device_context() as c:` """
-    port = next(iter(get_ftdi_device_paths()))
-    return SerialTrio(port, **DEFAULT_SERIAL_KWARGS)
+    return [comport.device for comport in comports() if comport.manufacturer == 'FTDI']
 
 
 async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRoverFirmwareVersion]:
@@ -34,7 +22,7 @@ async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRo
         with trio.fail_after(1):
             orp = OpenRoverProtocol(device)
             while True:
-                await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
+                orp.write_nowait(0, 0, 0, CommandVerbs.GET_DATA, 40)
                 k, version = await orp.read_one()
                 if k == 40:
                     return version
@@ -58,6 +46,9 @@ async def open_rover_device(*ports_to_try: Optional[str]) -> AsyncContextManager
                 await get_openrover_protocol_version(device)
                 yield device
                 return
-            except Exception as e:
+            except OpenRoverException as e:
                 exc_args.append((port, e))
+            except Exception as e:
+                pass
+                raise
     raise RoverDeviceNotFound(exc_args)

@@ -226,16 +226,21 @@ elements = [
     DataElement(8, UINT16, 'flipper position 2', 'flipper position sensor 2. 0=15 degrees; 1024=330 degrees;'),
     DataElement(10, OLD_CURRENT_FORMAT, 'left motor current'),
     DataElement(12, OLD_CURRENT_FORMAT, 'right motor current'),
-    DataElement(14, UINT16, 'left motor encoder count', 'May overflow or underflow. Increments when motor driven forward, decrements backward'),
-    DataElement(16, UINT16, 'right motor encoder count', 'May overflow or underflow. Increments when motor driven forward, decrements backward'),
+    DataElement(14, UINT16, 'left motor encoder count',
+                'May overflow or underflow. Increments when motor driven forward, decrements backward'),
+    DataElement(16, UINT16, 'right motor encoder count',
+                'May overflow or underflow. Increments when motor driven forward, decrements backward'),
     DataElement(18, UINT16, 'motors fault flag'),
     DataElement(20, UINT16, 'left motor temperature'),
     DataElement(22, UINT16, 'right motor temperature', not_implemented=True),
     DataElement(24, OLD_VOLTAGE_FORMAT, 'battery A voltage (external)'),
     DataElement(26, OLD_VOLTAGE_FORMAT, 'battery B voltage (external)'),
-    DataElement(28, UINT16, 'left motor encoder interval', '0 when motor stopped. Else proportional to motor period (inverse motor speed)'),
-    DataElement(30, UINT16, 'right motor encoder interval', '0 when motor stopped. Else proportional to motor period (inverse motor speed)'),
-    DataElement(32, UINT16, 'flipper motor encoder interval', '0 when motor stopped. Else proportional to motor period (inverse motor speed)', not_implemented=True),
+    DataElement(28, UINT16, 'left motor encoder interval',
+                '0 when motor stopped. Else proportional to motor period (inverse motor speed)'),
+    DataElement(30, UINT16, 'right motor encoder interval',
+                '0 when motor stopped. Else proportional to motor period (inverse motor speed)'),
+    DataElement(32, UINT16, 'flipper motor encoder interval',
+                '0 when motor stopped. Else proportional to motor period (inverse motor speed)', not_implemented=True),
     DataElement(34, PERCENTAGE_FORMAT, 'battery A state of charge', 'Proportional charge, 0.0=empty, 1.0=full'),
     DataElement(36, PERCENTAGE_FORMAT, 'battery B state of charge', 'Proportional charge, 0.0=empty, 1.0=full'),
     DataElement(38, CHARGER_STATE_FORMAT, 'battery charging state'),
@@ -244,7 +249,7 @@ elements = [
     DataElement(44, SIGNED_MILLIS_FORMAT, 'battery B current (external)'),
     DataElement(46, UINT16, 'motor flipper angle'),
     DataElement(48, FAN_SPEED_RESPONSE_FORMAT, 'fan speed'),
-    DataElement(50, DRIVE_MODE_FORMAT, 'drive mode'),
+    DataElement(50, DRIVE_MODE_FORMAT, 'drive mode', not_implemented=True),
     DataElement(52, BATTERY_STATUS_FORMAT, 'battery A status'),
     DataElement(54, BATTERY_STATUS_FORMAT, 'battery B status'),
     DataElement(56, UINT16, 'battery A mode'),
@@ -270,7 +275,11 @@ def doc():
     lines.append('| - | ---- | --------- | ----------- |')
 
     for de in elements:
-        lines.append(f'| {strike(de.index) if de.not_implemented else de.index} | {de.name} | {de.data_format.description()} | {de.description or ""} |')
+        lines.append((f'| {strike(de.index) if de.not_implemented else de.index}'
+                      f'| {de.name}'
+                      f'| {de.data_format.description()}'
+                      f'| {de.description or ""}'
+                      f'|'))
     return '\n'.join(lines)
 
 

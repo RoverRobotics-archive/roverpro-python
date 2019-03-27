@@ -45,11 +45,10 @@ async def test_reboot(device):
     # set a long timeout in case rover is already in bootloader
 
     try:
-        # reboot the device
-        await orp.write(0, 0, 0, CommandVerbs.RESTART, 0)
+        orp.write_nowait(0, 0, 0, CommandVerbs.RESTART, 0)
 
         # check that the device did turn off
-        await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
+        orp.write_nowait(0, 0, 0, CommandVerbs.GET_DATA, 40)
         with pytest.raises(trio.TooSlowError):
             with trio.fail_after(1):
                 await orp.read_one()
@@ -57,8 +56,8 @@ async def test_reboot(device):
         # check that the device comes back up and starts responding to request for version
         with trio.fail_after(30):
             while True:
+                orp.write_nowait(0, 0, 0, CommandVerbs.GET_DATA, 40)
                 with trio.move_on_after(1):
-                    await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
                     k, v = await orp.read_one()
                     if k == 40:
                         return
@@ -70,7 +69,8 @@ async def test_reboot(device):
 def mark_dangerous_test(reason):
     VARNAME = 'PYTEST_DANGER_OKAY'
     VARVALUE = '1'
-    return pytest.mark.skipif(os.getenv(VARNAME) != VARVALUE, reason=reason + f'\nSet the environment variable {VARNAME}={VARVALUE} to run anyway.')
+    return pytest.mark.skipif(os.getenv(VARNAME) != VARVALUE,
+                              reason=reason + f'\nSet the environment variable {VARNAME}={VARVALUE} to run anyway.')
 
 
 @mark_dangerous_test('This test will wipe your firmware and will take a long time.')
