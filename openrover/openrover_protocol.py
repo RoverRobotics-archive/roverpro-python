@@ -1,4 +1,5 @@
-from enum import IntEnum
+import dataclasses
+import enum
 from typing import Any, Tuple
 
 import trio
@@ -7,10 +8,16 @@ from .openrover_data import MOTOR_EFFORT_FORMAT, OPENROVER_DATA_ELEMENTS
 from .serial_trio import SerialTrio
 from .util import OpenRoverException
 
-SERIAL_START_BYTE = bytes([253])
+SERIAL_START_BYTE = bytes.fromhex('fd')
 
 
-class CommandVerbs(IntEnum):
+@dataclasses.dataclass
+class CommandVerb2:
+    command_id: int
+    command_desc: str
+
+
+class CommandVerb(enum.IntEnum):
     NOP = 0
     GET_DATA = 10
     SET_FAN_SPEED = 20
@@ -19,12 +26,12 @@ class CommandVerbs(IntEnum):
     FLIPPER_CALIBRATE = 250
     RELOAD_SETTINGS = 1
     COMMIT_SETTINGS = 2
-    SET_POWER_POLLING_INTERVAL = 3
-    SET_OVERCURRENT_THRESHOLD = 4
-    SET_OVERCURRENT_TRIGGER_DURATION = 5
-    SET_OVERCURRENT_RECOVERY_THRESHOLD = 6
-    SET_OVERCURRENT_RECOVERY_DURATION = 7
-    SET_PWM_FREQUENCY = 8
+    SET_POWER_POLLING_INTERVAL_MS = 3
+    SET_OVERCURRENT_THRESHOLD_100MA = 4
+    SET_OVERCURRENT_TRIGGER_DURATION_5MS = 5
+    SET_OVERCURRENT_RECOVERY_THRESHOLD_100MA = 6
+    SET_OVERCURRENT_RECOVERY_DURATION_5MS = 7
+    SET_PWM_FREQUENCY_KHZ = 8
 
 
 def encode_packet(*args: bytes):
@@ -48,7 +55,7 @@ class OpenRoverProtocol:
         data_element_index = raw_data[0]
         element_descriptor = OPENROVER_DATA_ELEMENTS[data_element_index]
         data_element_value = element_descriptor.data_format.unpack(raw_data[1:])
-        return (data_element_index, data_element_value)
+        return data_element_index, data_element_value
 
     async def _read_one_raw(self) -> bytes:
         """Reads a packet, verifies its checksum, and returns the packet payload"""
@@ -71,7 +78,7 @@ class OpenRoverProtocol:
     async def flush(self):
         await self._serial.flush(0)
 
-    def write_nowait(self, motor_left: float, motor_right: float, flipper: float, command_verb: CommandVerbs,
+    def write_nowait(self, motor_left: float, motor_right: float, flipper: float, command_verb: CommandVerb,
                      command_arg: int):
         binary = encode_packet(MOTOR_EFFORT_FORMAT.pack(motor_left),
                                MOTOR_EFFORT_FORMAT.pack(motor_right),

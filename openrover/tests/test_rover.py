@@ -4,10 +4,10 @@ import statistics
 import pytest
 import trio
 
-from openrover import OpenRoverException
-from openrover.openrover_data import OpenRoverFirmwareVersion, fix_encoder_delta
+from openrover.openrover_data import MotorStatusFlag, OPENROVER_DATA_ELEMENTS, OpenRoverFirmwareVersion, \
+    fix_encoder_delta
 from openrover.rover import Rover, open_rover
-from openrover.util import RoverDeviceNotFound
+from openrover.util import OpenRoverException, RoverDeviceNotFound
 
 
 @pytest.fixture
@@ -73,20 +73,15 @@ async def test_fan_speed(rover):
         assert got_fan_speed == pytest.approx(fan_speed_cmd, abs=0.1)
 
 
-import openrover.openrover_data
-
-
 async def test_get_all_data_elements(rover):
-    for i, de in openrover.openrover_data.OPENROVER_DATA_ELEMENTS.items():
-        try:
-            if not de.not_implemented:
-                v = await rover.get_data(i)
-                assert v is not None
-        except Exception as e:
-            raise
+    for i, de in OPENROVER_DATA_ELEMENTS.items():
+        if not de.not_implemented:
+            v = await rover.get_data(i)
+            assert v is not None
 
 
 @pytest.mark.parametrize('motor_effort', [0, -0.1, +0.1, -0.2, +0.2])
+@pytest.mark.motor
 async def test_encoder_intervals(rover, motor_effort):
     enc_counts_left = []
     enc_counts_right = []
@@ -142,7 +137,7 @@ async def test_currents(rover):
 
 async def test_soc(rover):
     battery_soc_a = await rover.get_data(34)
-    battery_soc_b = await rover.get_data(34)
+    battery_soc_b = await rover.get_data(36)
     assert 0 <= battery_soc_a <= 1
     assert 0 <= battery_soc_b <= 1
     assert isclose(battery_soc_a, battery_soc_b, rel_tol=0.1, abs_tol=0.1)
@@ -167,15 +162,15 @@ async def test_currents_charging(rover):
 async def test_voltages(rover):
     battery_voltage_a = await rover.get_data(24)
     battery_voltage_a_i2c = await rover.get_data(64)
-    assert 14 < battery_voltage_a_i2c < 18  # voltage should be between 14-18 V
-    assert 14 < battery_voltage_a < 18
+    assert 12 < battery_voltage_a_i2c < 16.5
+    assert 12 < battery_voltage_a < 16.5
     # must agree within 5% or 50mV
     assert isclose(battery_voltage_a_i2c, battery_voltage_a, rel_tol=0.05, abs_tol=0.05)
 
     battery_voltage_b = await rover.get_data(26)
     battery_voltage_b_i2c = await rover.get_data(66)
-    assert 14 < battery_voltage_b_i2c < 18
-    assert 14 < battery_voltage_b < 18
+    assert 12 < battery_voltage_b_i2c < 16.5
+    assert 12 < battery_voltage_b < 16.5
     # must agree within 5% or 50mV
     assert isclose(battery_voltage_b_i2c, battery_voltage_b, rel_tol=0.05, abs_tol=0.05)
 
@@ -191,3 +186,36 @@ async def test_temperatures(rover):
     assert 10 < battery_temp_a < 55
     assert 10 < battery_temp_b < 55
     assert abs(battery_temp_a - battery_temp_b) < 5
+
+
+async def test_motor_status_braked(rover):
+    rover.set_motor_speeds(0, 0, 0)
+    statuses = await rover.get_data(72), await rover.get_data(74), await rover.get_data(76)
+    for s in statuses:
+        assert isinstance(s, MotorStatusFlag)
+        assert MotorStatusFlag.BRAKE in s
+
+
+# @pytest.mark.motor
+@pytest.mark.parametrize('forward', [True, False], ids=['forward', 'reverse'])
+async def test_motor_status_moving(rover, forward):
+    speed = 0.2
+    if forward:
+        rover.set_motor_speeds(+speed, -speed, +speed)
+    else:
+        rover.set_motor_speeds(-speed, +speed, -speed)
+
+    for i in range(10):
+        rover.send_speed()
+        await trio.sleep(0.15)
+
+    statuses = await rover.get_data(72), await rover.get_data(74), await rover.get_data(76)
+
+    for s in statuses:
+        assert isinstance(s, MotorStatusFlag)
+        if forward:
+            assert MotorStatusFlag.REVERSE not in s
+        else:
+            assert MotorStatusFlag.REVERSE in s
+
+        assert MotorStatusFlag.BRAKE not in s

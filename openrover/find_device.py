@@ -7,7 +7,7 @@ import trio
 from openrover.openrover_data import OpenRoverFirmwareVersion
 from openrover.serial_trio import SerialTrio
 from openrover.util import RoverDeviceNotFound
-from .openrover_protocol import CommandVerbs, OpenRoverProtocol
+from .openrover_protocol import CommandVerb, OpenRoverProtocol
 from .util import OpenRoverException
 
 DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, stopbits=1)
@@ -22,7 +22,7 @@ async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRo
         with trio.fail_after(1):
             orp = OpenRoverProtocol(device)
             while True:
-                orp.write_nowait(0, 0, 0, CommandVerbs.GET_DATA, 40)
+                orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
                 k, version = await orp.read_one()
                 if k == 40:
                     return version
@@ -48,7 +48,4 @@ async def open_rover_device(*ports_to_try: Optional[str]) -> AsyncContextManager
                 return
             except OpenRoverException as e:
                 exc_args.append((port, e))
-            except Exception as e:
-                pass
-                raise
     raise RoverDeviceNotFound(exc_args)

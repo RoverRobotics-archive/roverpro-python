@@ -1,6 +1,6 @@
 import abc
 from dataclasses import dataclass
-from enum import IntEnum
+import enum
 import typing
 
 from .util import OpenRoverException
@@ -41,10 +41,7 @@ class IntDataFormat(ReadDataFormat, WriteDataFormat):
         return f'{s} integer ({n} bits)'
 
     def pack(self, value):
-        try:
-            return int(value).to_bytes(self.nbytes, byteorder='big', signed=self.signed)
-        except Exception as e:
-            raise
+        return int(value).to_bytes(self.nbytes, byteorder='big', signed=self.signed)
 
     def unpack(self, b: bytes):
         return int.from_bytes(b, byteorder='big', signed=self.signed)
@@ -91,7 +88,8 @@ class DataFormatFirmwareVersion(ReadDataFormat):
         return OpenRoverFirmwareVersion(v)
 
     def description(self):
-        return 'XYYZZ, where X=major version, Y=minor version, Z = patch version. e.g. 10502 = version 1.05.02. The special value 16421 represents pre-1.3 versions'
+        return 'XYYZZ, where X=major version, Y=minor version, Z = patch version.' \
+               'e.g. 10502 = version 1.05.02. The special value 16421 represents pre-1.3 versions'
 
 
 class DataFormatChargerState(ReadDataFormat, WriteDataFormat):
@@ -106,7 +104,7 @@ class DataFormatChargerState(ReadDataFormat, WriteDataFormat):
             return self.CHARGER_INACTIVE_MAGIC_BYTES
 
     def unpack(self, b):
-        return (bytes(b) == self.CHARGER_ACTIVE_MAGIC_BYTES)
+        return bytes(b) == self.CHARGER_ACTIVE_MAGIC_BYTES
 
     def description(self):
         return '0xDADA if charging, else 0x0000'
@@ -149,7 +147,7 @@ class DataFormatBatteryStatus(ReadDataFormat):
         return 'bit flags'
 
 
-class DriveMode(IntEnum):
+class DriveMode(enum.IntEnum):
     OPEN_LOOP = 0
     CLOSED_LOOP = 1
 
@@ -209,6 +207,48 @@ DRIVE_MODE_FORMAT = DataFormatDriveMode()
 BATTERY_STATUS_FORMAT = DataFormatBatteryStatus()
 
 
+class MotorStatusFlag(enum.Flag):
+    NONE = 0
+    FAULT1 = enum.auto()
+    FAULT2 = enum.auto()
+    DECAY_MODE = enum.auto()
+    REVERSE = enum.auto()
+    BRAKE = enum.auto()
+    COAST = enum.auto()
+
+
+class DataFormatMotorStatus(ReadDataFormat):
+
+    def description(self):
+        return f'motor status bit flags'
+
+    def unpack(self, b: bytes):
+        u = UINT16.unpack(b)
+
+        bit_meanings = [MotorStatusFlag.FAULT1, MotorStatusFlag.FAULT2, MotorStatusFlag.DECAY_MODE,
+                        MotorStatusFlag.REVERSE, MotorStatusFlag.BRAKE, MotorStatusFlag.COAST]
+        if len(bit_meanings) <= u.bit_length():
+            raise ValueError('too many bits to unpack')
+
+        result = MotorStatusFlag.NONE
+        for i, flag in enumerate(bit_meanings):
+            if u & 1 << i:
+                result |= flag
+        return result
+
+
+class DataFormatIgnored(WriteDataFormat):
+    def description(self):
+        return f'Ignored data {self.n_bytes} bytes long'
+
+    def pack(self, value=None) -> bytes:
+        assert value is None
+        return bytes(self.n_bytes)
+
+    def __init__(self, n_bytes):
+        self.n_bytes = n_bytes
+
+
 @dataclass
 class DataElement:
     index: int
@@ -260,6 +300,9 @@ elements = [
     DataElement(66, UNSIGNED_MILLIS_FORMAT, 'battery B voltage (internal)'),
     DataElement(68, SIGNED_MILLIS_FORMAT, 'battery A current (internal)', '>0 = charging; <0 = discharging'),
     DataElement(70, SIGNED_MILLIS_FORMAT, 'battery B current (internal)', '>0 = charging; <0 = discharging'),
+    DataElement(72, DataFormatMotorStatus(), 'left motor status'),
+    DataElement(74, DataFormatMotorStatus(), 'right motor status'),
+    DataElement(76, DataFormatMotorStatus(), 'flipper motor status'),
 ]
 
 OPENROVER_DATA_ELEMENTS = {e.index: e for e in elements}
@@ -270,9 +313,8 @@ def strike(s):
 
 
 def doc():
-    lines = []
-    lines.append('| # | Name | Data Type | Description |')
-    lines.append('| - | ---- | --------- | ----------- |')
+    lines = ['| # | Name | Data Type | Description |',
+             '| - | ---- | --------- | ----------- |']
 
     for de in elements:
         lines.append((f'| {strike(de.index) if de.not_implemented else de.index}'
