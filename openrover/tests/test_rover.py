@@ -196,7 +196,7 @@ async def test_motor_status_braked(rover):
         assert MotorStatusFlag.BRAKE in s
 
 
-# @pytest.mark.motor
+@pytest.mark.motor
 @pytest.mark.parametrize('forward', [True, False], ids=['forward', 'reverse'])
 async def test_motor_status_moving(rover, forward):
     speed = 0.2
