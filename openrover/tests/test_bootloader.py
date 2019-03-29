@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -10,7 +9,7 @@ import trio
 import openrover
 from openrover.find_device import open_rover_device
 from openrover.openrover_data import OpenRoverFirmwareVersion
-from openrover.openrover_protocol import CommandVerbs, OpenRoverProtocol
+from openrover.openrover_protocol import CommandVerb, OpenRoverProtocol
 from openrover.util import RoverDeviceNotFound
 
 
@@ -45,11 +44,10 @@ async def test_reboot(device):
     # set a long timeout in case rover is already in bootloader
 
     try:
-        # reboot the device
-        await orp.write(0, 0, 0, CommandVerbs.RESTART, 0)
+        orp.write_nowait(0, 0, 0, CommandVerb.RESTART, 0)
 
         # check that the device did turn off
-        await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
+        orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
         with pytest.raises(trio.TooSlowError):
             with trio.fail_after(1):
                 await orp.read_one()
@@ -57,8 +55,8 @@ async def test_reboot(device):
         # check that the device comes back up and starts responding to request for version
         with trio.fail_after(30):
             while True:
+                orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
                 with trio.move_on_after(1):
-                    await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
                     k, v = await orp.read_one()
                     if k == 40:
                         return
@@ -67,17 +65,11 @@ async def test_reboot(device):
         raise
 
 
-def mark_dangerous_test(reason):
-    VARNAME = 'PYTEST_DANGER_OKAY'
-    VARVALUE = '1'
-    return pytest.mark.skipif(os.getenv(VARNAME) != VARVALUE, reason=reason + f'\nSet the environment variable {VARNAME}={VARVALUE} to run anyway.')
-
-
-@mark_dangerous_test('This test will wipe your firmware and will take a long time.')
+@pytest.mark.bootload
 async def test_bootloader(powerboard_firmware_file, booty_exe):
     async with open_rover_device() as device:
         orp = OpenRoverProtocol(device)
-        await orp.write(0, 0, 0, CommandVerbs.RESTART, 0)
+        orp.write_nowait(0, 0, 0, CommandVerb.RESTART, 0)
         port = device.port
         # flash rover firmware
         args = [
@@ -126,7 +118,7 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
     with trio.fail_after(30):
         while True:
             with trio.move_on_after(1):
-                await orp.write(0, 0, 0, CommandVerbs.GET_DATA, 40)
+                orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
                 k, version = await orp.read_one()
                 assert k == 40
                 assert isinstance(version, OpenRoverFirmwareVersion)

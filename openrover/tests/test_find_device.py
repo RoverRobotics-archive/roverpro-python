@@ -5,9 +5,9 @@ from openrover.find_device import *
 
 def test_ftdi_device_paths():
     d = get_ftdi_device_paths()
-    for i in d:
-        assert isinstance(i, str)
-        assert i != ''
+    for name in d:
+        assert isinstance(name, str)
+        assert name != ''
 
 
 async def test_open_any_openrover_device():
@@ -25,12 +25,18 @@ async def test_open_any_openrover_device():
 
 
 async def test_open_rover_device_sequentially_okay():
+    if len(get_ftdi_device_paths()) == 0:
+        pytest.skip('no FTDI devices found')
+
     for i in range(3):
         async with open_rover_device():
             pass
 
 
 async def test_open_rover_device_nested_fails():
+    if len(get_ftdi_device_paths()) == 0:
+        pytest.skip('no FTDI devices found')
+
     async with open_rover_device() as d:
         with pytest.raises(OpenRoverException):
             async with SerialTrio(d.port):

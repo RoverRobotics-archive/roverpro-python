@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 from enum import IntEnum
 import logging
 import struct
 from typing import Any, Tuple
 
-from dataclasses import dataclass
 import trio
 
 from openrover.serial_trio import SerialTrio
@@ -36,7 +36,7 @@ class BootyCommand(IntEnum):
 
 
 @dataclass
-class BootyDeviceMetadata():
+class BootyDeviceMetadata:
     platform: str
     version: str
     row_len: int
@@ -151,7 +151,8 @@ class BootyProtocol:
         return bytes(message)
 
     async def _cmd_request_data(self, verb: BootyCommand):
-        assert verb in [BootyCommand.READ_PLATFORM, BootyCommand.READ_VERSION, BootyCommand.READ_ROW_LEN, BootyCommand.READ_PAGE_LEN, BootyCommand.READ_PROG_LEN, BootyCommand.READ_MAX_PROG_SIZE,
+        assert verb in [BootyCommand.READ_PLATFORM, BootyCommand.READ_VERSION, BootyCommand.READ_ROW_LEN,
+                        BootyCommand.READ_PAGE_LEN, BootyCommand.READ_PROG_LEN, BootyCommand.READ_MAX_PROG_SIZE,
                         BootyCommand.READ_APP_START_ADDRESS, BootyCommand.READ_BOOT_START_ADDRESS]
         await self._cmd_write(verb)
 
