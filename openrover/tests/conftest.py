@@ -14,6 +14,17 @@ def pytest_addoption(parser):
                           'so the rover should be untethered or raised on a jackstand.')
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "motor: this test uses the rover motors"
+    )
+    config.addinivalue_line(
+        "markers",
+        "bootload: this test may reprogram the rover"
+    )
+
+
 def pytest_fixture_setup(fixturedef, request):
     return pytest_trio.plugin.handle_fixture(fixturedef, request, force_trio_mode=True)
 
