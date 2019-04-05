@@ -13,7 +13,7 @@ from openrover.serial_trio import SerialTrio
 
 BAUDRATE = 57600
 
-SETTINGS_VERBS = list(map(CommandVerb, [3, 4, 5, 6, 7, 8]))
+SETTINGS_VERBS = list(map(CommandVerb, [*range(3, 10), *range(11, 14)]))
 
 
 def rover_command_arg_pair(arg):
@@ -68,7 +68,8 @@ async def amain():
         async with SerialTrio(port, baudrate=BAUDRATE) as ser:
             orp = OpenRoverProtocol(ser)
             print('instructing rover to restart')
-            orp.write_nowait(0, 0, 0, CommandVerb.RESTART, 0)
+            for i in range(3):
+                orp.write_nowait(0, 0, 0, CommandVerb.RESTART, 0)
             await orp.flush()
 
         pargs = [sys.executable, '-m', 'booty',
@@ -89,13 +90,13 @@ async def amain():
         expected_version = args.minimumversion
         actual_version = None
         print(f'Expecting version at least {expected_version}')
-        async with SerialTrio(port, baudrate=57600) as device:
+        async with SerialTrio(port, baudrate=BAUDRATE) as device:
             orp = OpenRoverProtocol(device)
             orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
-            with trio.fail_after(10):
+            with trio.move_on_after(10):
                 k, version = await orp.read_one()
-            if k == 40:
-                actual_version = version
+                if k == 40:
+                    actual_version = version
 
         if actual_version is None:
             print('could not get version')
