@@ -80,7 +80,7 @@ async def test_get_all_data_elements(rover):
             assert v is not None
 
 
-@pytest.mark.parametrize('motor_effort', [0, -0.1, +0.1, -0.2, +0.2])
+@pytest.mark.parametrize('motor_effort', [0, -0.1, +0.1, -0.2, +0.2, 0])
 @pytest.mark.motor
 async def test_encoder_intervals(rover, motor_effort):
     enc_counts_left = []
@@ -90,7 +90,7 @@ async def test_encoder_intervals(rover, motor_effort):
 
     rover.set_motor_speeds(motor_effort, motor_effort, 0)
 
-    for _ in range(3):
+    for _ in range(30):
         rover.send_speed()
         await trio.sleep(0.1)
 
