@@ -18,9 +18,9 @@ class DeviceClosedException(serial.SerialException):
 
 
 class SerialTrio(trio.abc.AsyncResource):
-    _serial: serial.Serial
-    _inbound_high_water: int = 4000
-    _outbound_high_water: int = 8000
+    _serial = None  # type: serial.Serial
+    _inbound_high_water = 4000
+    _outbound_high_water = 8000
 
     def __init__(self, port, **serial_kwargs):
         """Wrapper for pyserial that makes it work better with async"""
@@ -49,7 +49,7 @@ class SerialTrio(trio.abc.AsyncResource):
 
     def _read_bytes_nowait(self, n_max):
         if self._inbound_high_water <= self.in_waiting:
-            warnings.warn(f'Incoming buffer is backlogged. Data may be lost. {self._serial.in_waiting} bytes')
+            warnings.warn('Incoming buffer is backlogged. Data may be lost. {} bytes'.format(self._serial.in_waiting))
         return self._serial.read(n_max)
 
     async def read_until(self, terminator):
@@ -62,7 +62,7 @@ class SerialTrio(trio.abc.AsyncResource):
                 await trio.sleep(0.001)
             return bytes(line)
         except trio.Cancelled:
-            logging.exception(f'Abandoning data {line}')
+            logging.exception('Abandoning data: {}'.format(line))
             self._serial.cancel_read()
             raise
 
@@ -76,12 +76,12 @@ class SerialTrio(trio.abc.AsyncResource):
     def write_nowait(self, data):
         self._serial.write(data)
         if self._outbound_high_water <= self._serial.out_waiting:
-            warnings.warn(f'Outgoing buffer is backlogged. Data may be lost. {self._serial.out_waiting} bytes')
+            warnings.warn('Outgoing buffer is backlogged. Data may be lost. {} bytes'.format(self._serial.out_waiting))
 
     async def write(self, data):
         self._serial.write(data)
         if self._outbound_high_water <= self._serial.out_waiting:
-            warnings.warn(f'Outgoing buffer is backlogged. Data may be lost. {self._serial.out_waiting} bytes')
+            warnings.warn('Outgoing buffer is backlogged. Data may be lost. {} bytes'.format(self._serial.out_waiting))
         try:
             await self.flush()
         except trio.Cancelled():

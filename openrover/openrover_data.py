@@ -1,13 +1,10 @@
 import abc
-from dataclasses import dataclass
-import enum
-import typing
 
 from .util import OpenRoverException
 
 
 class ReadDataFormat(abc.ABC):
-    python_type: typing.Type = None
+    python_type = None
 
     @abc.abstractmethod
     def description(self):
@@ -19,7 +16,7 @@ class ReadDataFormat(abc.ABC):
 
 
 class WriteDataFormat(abc.ABC):
-    python_type: typing.Type = None
+    python_type = None
 
     @abc.abstractmethod
     def description(self):
@@ -38,7 +35,7 @@ class IntDataFormat(ReadDataFormat, WriteDataFormat):
     def description(self):
         s = 'signed' if self.signed else 'unsigned'
         n = self.nbytes * 8
-        return f'{s} integer ({n} bits)'
+        return '{} integer ({} bits)'.format(s, n)
 
     def pack(self, value):
         return int(value).to_bytes(self.nbytes, byteorder='big', signed=self.signed)
@@ -50,16 +47,17 @@ class IntDataFormat(ReadDataFormat, WriteDataFormat):
 OPENROVER_LEGACY_VERSION = 16421
 
 
-@dataclass
 class OpenRoverFirmwareVersion:
-    value: int
+    def __init__(self, value: int):
+        if value == 0:
+            raise OpenRoverException('invalid version number %s', value)
+        self.value = value
 
-    def __post_init__(self):
-        if self.value == 0:
-            raise OpenRoverException('invalid version number %s', self.value)
+    def __eq__(self, other):
+        return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
 
     def __str__(self):
-        return f'{self.major}.{self.minor}.{self.patch}'
+        return '{}.{}.{}'.format(self.major, self.minor, self.patch)
 
     @property
     def major(self):
@@ -110,18 +108,25 @@ class DataFormatChargerState(ReadDataFormat, WriteDataFormat):
         return '0xDADA if charging, else 0x0000'
 
 
-@dataclass
-class BatteryStatus:
-    overcharged_alarm: bool
-    terminate_charge_alarm: bool
-    over_temp_alarm: bool
-    terminate_discharge_alarm: bool
-    remaining_capacity_alarm: bool
-    remaining_time_alarm: bool
-    initialized: bool
-    discharging: bool
-    fully_charged: bool
-    fully_discharged: bool
+import enum
+
+try:
+    from enum import Flag, auto
+except ImportError:
+    from aenum import Flag, auto
+
+
+class BatteryStatus(Flag):
+    overcharged_alarm = auto()
+    terminate_charge_alarm = auto()
+    over_temp_alarm = auto()
+    terminate_discharge_alarm = auto()
+    remaining_capacity_alarm = auto()
+    remaining_time_alarm = auto()
+    initialized = auto()
+    discharging = auto()
+    fully_charged = auto()
+    fully_discharged = auto()
 
 
 class DataFormatBatteryStatus(ReadDataFormat):
@@ -130,18 +135,22 @@ class DataFormatBatteryStatus(ReadDataFormat):
     def unpack(self, b: bytes):
         assert len(b) == 2
         as_int = int.from_bytes(b, byteorder='big', signed=False)
-        return BatteryStatus(
-            overcharged_alarm=bool(as_int & 0x8000),
-            terminate_charge_alarm=bool(as_int & 0x4000),
-            over_temp_alarm=bool(as_int & 0x1000),
-            terminate_discharge_alarm=bool(as_int & 0x0800),
-            remaining_capacity_alarm=bool(as_int & 0x0200),
-            remaining_time_alarm=bool(as_int & 0x0100),
-            initialized=bool(as_int & 0x0080),
-            discharging=bool(as_int & 0x0040),
-            fully_charged=bool(as_int & 0x0020),
-            fully_discharged=bool(as_int & 0x0010)
-        )
+        result = BatteryStatus(0)
+        for mask, val in ((0x8000, BatteryStatus.overcharged_alarm),
+                          (0x4000, BatteryStatus.terminate_charge_alarm),
+                          (0x1000, BatteryStatus.over_temp_alarm),
+                          (0x0800, BatteryStatus.terminate_discharge_alarm),
+                          (0x0200, BatteryStatus.remaining_capacity_alarm),
+                          (0x0100, BatteryStatus.remaining_time_alarm),
+                          (0x0080, BatteryStatus.initialized),
+                          (0x0040, BatteryStatus.discharging),
+                          (0x0020, BatteryStatus.fully_charged),
+                          (0x0010, BatteryStatus.fully_discharged)
+
+                          ):
+            if as_int & mask:
+                result |= val
+        return result
 
     def description(self):
         return 'bit flags'
@@ -176,7 +185,8 @@ class DataFormatFixedPrecision(ReadDataFormat, WriteDataFormat):
         return self.base_type.pack(n)
 
     def description(self):
-        return f'fractional (resolution=1/{self.step}, zero={self.zero}) stored as {self.base_type.description()}'
+        return 'fractional (resolution=1/{}, zero={}) stored as {}'.format(self.step, self.zero,
+                                                                           self.base_type.description())
 
 
 class DataFormatDriveMode(ReadDataFormat):
@@ -207,20 +217,20 @@ DRIVE_MODE_FORMAT = DataFormatDriveMode()
 BATTERY_STATUS_FORMAT = DataFormatBatteryStatus()
 
 
-class MotorStatusFlag(enum.Flag):
+class MotorStatusFlag(Flag):
     NONE = 0
-    FAULT1 = enum.auto()
-    FAULT2 = enum.auto()
-    DECAY_MODE = enum.auto()
-    REVERSE = enum.auto()
-    BRAKE = enum.auto()
-    COAST = enum.auto()
+    FAULT1 = auto()
+    FAULT2 = auto()
+    DECAY_MODE = auto()
+    REVERSE = auto()
+    BRAKE = auto()
+    COAST = auto()
 
 
 class DataFormatMotorStatus(ReadDataFormat):
 
     def description(self):
-        return f'motor status bit flags'
+        return 'motor status bit flags'
 
     def unpack(self, b: bytes):
         u = UINT16.unpack(b)
@@ -239,7 +249,7 @@ class DataFormatMotorStatus(ReadDataFormat):
 
 class DataFormatIgnored(WriteDataFormat):
     def description(self):
-        return f'Ignored data {self.n_bytes} bytes long'
+        return 'Ignored data {} bytes long'.format(self.n_bytes)
 
     def pack(self, value=None) -> bytes:
         assert value is None
@@ -249,13 +259,14 @@ class DataFormatIgnored(WriteDataFormat):
         self.n_bytes = n_bytes
 
 
-@dataclass
 class DataElement:
-    index: int
-    data_format: ReadDataFormat
-    name: str
-    description: str = None
-    not_implemented: bool = False
+    def __init__(self, index: int, data_format: ReadDataFormat, name: str, description: str = None,
+                 not_implemented: bool = False):
+        self.index = index
+        self.data_format = data_format
+        self.name = name
+        self.description = description
+        self.not_implemented = not_implemented
 
 
 elements = [
@@ -309,7 +320,7 @@ OPENROVER_DATA_ELEMENTS = {e.index: e for e in elements}
 
 
 def strike(s):
-    return f'~~{s}~~'
+    return '~~{}~~'.format(s)
 
 
 def doc():
@@ -317,11 +328,10 @@ def doc():
              '| - | ---- | --------- | ----------- |']
 
     for de in elements:
-        lines.append((f'| {strike(de.index) if de.not_implemented else de.index}'
-                      f'| {de.name}'
-                      f'| {de.data_format.description()}'
-                      f'| {de.description or ""}'
-                      f'|'))
+        lines.append('|' + '|'.join([strike(de.index) if de.not_implemented else de.index,
+                                     de.name,
+                                     de.data_format.description(),
+                                     de.description]) + '|')
     return '\n'.join(lines)
 
 

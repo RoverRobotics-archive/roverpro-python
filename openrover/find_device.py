@@ -1,6 +1,6 @@
 from typing import AsyncContextManager, Awaitable, Optional, Sequence
 
-from async_generator import asynccontextmanager
+from async_generator import async_generator, asynccontextmanager, yield_
 from serial.tools.list_ports import comports
 import trio
 
@@ -27,12 +27,13 @@ async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRo
                 if k == 40:
                     return version
     except trio.TooSlowError as e:
-        raise OpenRoverException(f'Device did not respond to a request for version. Is it on?') from e
+        raise OpenRoverException('Device did not respond to a request for version. Is it on?') from e
     except Exception as e:
-        raise OpenRoverException(f'Device did not return a valid openrover version', e) from e
+        raise OpenRoverException('Device did not return a valid openrover version', e) from e
 
 
 @asynccontextmanager
+@async_generator
 async def open_rover_device(*ports_to_try: Optional[str]) -> AsyncContextManager[SerialTrio]:
     """
     Enumerates serial devices until it finds one that responds to a request for OpenRover version. Returns that device.
@@ -44,7 +45,7 @@ async def open_rover_device(*ports_to_try: Optional[str]) -> AsyncContextManager
         async with SerialTrio(port, **DEFAULT_SERIAL_KWARGS) as device:
             try:
                 await get_openrover_protocol_version(device)
-                yield device
+                await yield_(device)
                 return
             except OpenRoverException as e:
                 exc_args.append((port, e))

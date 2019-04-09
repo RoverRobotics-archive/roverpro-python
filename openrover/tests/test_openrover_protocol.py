@@ -1,5 +1,6 @@
 import statistics
 
+from async_generator import async_generator, yield_
 import pytest
 import trio
 
@@ -12,10 +13,11 @@ n = 100
 
 
 @pytest.fixture
+@async_generator
 async def protocol():
     try:
         async with open_rover_device() as r:
-            yield OpenRoverProtocol(r)
+            await yield_(OpenRoverProtocol(r))
     except RoverDeviceNotFound:
         pytest.skip('This test requires a rover device but none was found')
 
@@ -46,7 +48,7 @@ async def test_protocol_write_read_immediate(protocol):
             assert 0 < version.value
             n_received += 1
 
-    print(f'success ratio {n_received / n}')
+    print('success ratio {}'.format(n_received / n))
     assert 0.9 < n_received / n <= 1
 
 
@@ -66,7 +68,7 @@ async def test_protocol_writes_then_reads(protocol):
     except trio.TooSlowError:
         pass
 
-    print(f'success ratio {n_received / n}')
+    print('success ratio {}'.format(n_received / n))
     assert 0.9 < n_received / n <= 1
 
 
