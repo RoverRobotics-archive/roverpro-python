@@ -4,12 +4,12 @@ This is the official Python driver for the [Rover Robotics](https://roverrobotic
 
 ## Setup
 
-Assuming you [already have *Pipenv*](https://pipenv.readthedocs.io/en/latest/install/#installing-pipenv), and a compatible version of Python (3.7 or 3.6), set up a new virtual environment:
+Assuming you [already have *Pipenv*](https://pipenv.readthedocs.io/en/latest/install/#installing-pipenv), and a compatible version of Python (3.5+), set up a new virtual environment:
 
 ```
 mkdir myproject
 cd myproject
-pipenv --python 3.7
+pipenv install --python 3
 ```
 
 To activate that virtual environment, `pipenv shell` in that directory.
@@ -26,7 +26,7 @@ pip3 install -e git+https://github.com/RoverRobotics/openrover_python_driver/tre
 
 ### Utilities
 ### pitstop
-Pitstop is a new utility to bootload your rover and set options. After installing, you can invoke it with `pitstop` or `python3 -m openrover.pitstop`.
+Pitstop is a new utility to bootload your rover and set options. After installing, you can invoke it with `pitstop`.
 
 ```
 > pitstop --help
@@ -51,12 +51,17 @@ optional arguments:
                                 6=SET_OVERCURRENT_RECOVERY_THRESHOLD_100MA
                                 7=SET_OVERCURRENT_RECOVERY_DURATION_5MS
                                 8=SET_PWM_FREQUENCY_KHZ
+                                9=SET_BRAKE_ON_ZERO_SPEED_COMMAND
+                                11=SET_BRAKE_ON_DRIVE_TIMEOUT
+                                12=SET_MOTOR_SLOW_DECAY_MODE
+                                13=SET_TIME_TO_FULL_SPEED
 ```
 
 ### tests
 
 To run tests, first attach the rover via breakout cable then run either `openrover-test` or `python3 -m openrover.test`.
 By default, tests that involve running the motors will be skipped, since you may not want a rover ripping cables out of your computer. If you have made sure running the motors will not damage anything, these tests can be opted in with the flag `--motorok`.
+
 ```
 > openrover-test
 ==================== test session starts =====================
