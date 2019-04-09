@@ -40,7 +40,7 @@ async def amain():
                              'version may be in the form N.N.N, N.N, or N')
     parser.add_argument('-u', '--updatesettings', type=rover_command_arg_pair, metavar='k:v', nargs='+',
                         help='Send additional commands to the rover. v may be 0-255; k may be:\n\t' + '\n\t'.join(
-                            f'{s.value}={s.name}' for s in SETTINGS_VERBS
+                            '{}={}'.format(s.value, s.name) for s in SETTINGS_VERBS
                         ))
 
     args = parser.parse_args()
@@ -55,14 +55,14 @@ async def amain():
             print('No devices found')
             exit(1)
         if len(ports) > 1:
-            print(f'Multiple devices found: {", ".join(ports)}')
+            print('Multiple devices found: {}'.format(", ".join(ports)))
         port = ports[0]
-    print(f'Using device {port}')
+    print('Using device {}'.format(port))
 
     if args.flash is not None:
         hexfile = Path(args.flash)
         if not hexfile.is_file():
-            print(f'Could not bootload. Hex file {hexfile.absolute()} does not exist.')
+            print('Could not bootload. Hex file {} does not exist.'.format(hexfile.absolute()))
             exit(1)
 
         async with SerialTrio(port, baudrate=BAUDRATE) as ser:
@@ -79,7 +79,7 @@ async def amain():
                  '--erase',
                  '--load',
                  '--verify']
-        print(f'invoking bootloader: {subprocess.list2cmdline(pargs)}')
+        print('invoking bootloader: {}'.format(subprocess.list2cmdline(pargs)))
         subprocess.check_call(pargs)
 
         print('starting firmware')
@@ -89,7 +89,7 @@ async def amain():
     if args.minimumversion is not None:
         expected_version = args.minimumversion
         actual_version = None
-        print(f'Expecting version at least {expected_version}')
+        print('Expecting version at least {}'.format(expected_version))
         async with SerialTrio(port, baudrate=BAUDRATE) as device:
             orp = OpenRoverProtocol(device)
             orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
@@ -102,7 +102,7 @@ async def amain():
             print('could not get version')
             exit(1)
         else:
-            print(f'Actual version = {actual_version}')
+            print('Actual version = {}'.format(actual_version))
         if LooseVersion(str(actual_version)) < expected_version:
             print('Failed!')
             exit(1)
@@ -113,14 +113,14 @@ async def amain():
             print('Loading settings from non-volatile memory')
             orp.write_nowait(0, 0, 0, CommandVerb.RELOAD_SETTINGS, 0)
             for k, v in args.updatesettings or ():
-                print(f'\tSetting {k.value} ({k.name}) = {v}')
+                print('\tSetting {} ({}) = {}'.format(k.value, k.name, v))
                 orp.write_nowait(0, 0, 0, k, v)
             print('Saving settings to non-volatile memory')
             print()
             orp.write_nowait(0, 0, 0, CommandVerb.COMMIT_SETTINGS, 0)
             await orp.flush()
 
-    print('\r\n'.join([
+    print('\n'.join([
         r'      VROOM      ',
         r'  _           _  ',
         r' /#\ ------- /#\ ',

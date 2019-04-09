@@ -3,6 +3,7 @@ import shutil
 import subprocess
 from subprocess import list2cmdline
 
+from async_generator import async_generator, yield_
 import pytest
 import trio
 
@@ -14,10 +15,11 @@ from openrover.util import RoverDeviceNotFound
 
 
 @pytest.fixture
+@async_generator
 async def device():
     try:
         async with open_rover_device() as dev:
-            yield dev
+            await yield_(dev)
     except RoverDeviceNotFound:
         pytest.skip('No openrover device found')
 
@@ -96,7 +98,7 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                                 a_line = await line_generator.__anext__()
                             lines.append(a_line)
                     except trio.TooSlowError:
-                        pytest.fail(f'booty became unresponsive after output {lines}')
+                        pytest.fail('booty became unresponsive after output {}'.format(lines))
                     except StopAsyncIteration:
                         pass
                     await trio.sleep(1)
@@ -136,6 +138,7 @@ async def stream_to_string(stream: trio.abc.ReceiveStream):
     return buf
 
 
+@async_generator
 async def stream_to_lines(stream: trio.abc.ReceiveStream):
     buf = ''
     async with stream:
@@ -146,6 +149,6 @@ async def stream_to_lines(stream: trio.abc.ReceiveStream):
             buf += new_bytes.decode()
             *some_lines, buf = buf.splitlines()
             for line in some_lines:
-                yield line
+                await yield_(line)
         if buf != '':
-            yield buf
+            await yield_(buf)

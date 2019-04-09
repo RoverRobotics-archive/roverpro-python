@@ -1,6 +1,7 @@
 from math import isclose
 import statistics
 
+from async_generator import async_generator, yield_
 import pytest
 import trio
 
@@ -11,10 +12,11 @@ from openrover.util import OpenRoverException, RoverDeviceNotFound
 
 
 @pytest.fixture
+@async_generator
 async def rover():
     try:
         async with open_rover() as r:
-            yield r
+            await yield_(r)
     except RoverDeviceNotFound:
         pytest.skip('This test requires a rover device but none was found')
 

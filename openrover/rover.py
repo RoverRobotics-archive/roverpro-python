@@ -1,6 +1,6 @@
-from typing import Any, Dict, Iterable, Optional, Tuple
+from typing import Any, Dict, Iterable, Optional
 
-from async_generator import asynccontextmanager
+from async_generator import async_generator, asynccontextmanager, yield_
 import trio
 
 from openrover.find_device import open_rover_device
@@ -11,6 +11,7 @@ from .util import OpenRoverException
 
 
 @asynccontextmanager
+@async_generator
 async def open_rover(path_to_serial: Optional[str] = None):
     async with trio.open_nursery() as nursery:
         if path_to_serial is None:
@@ -21,7 +22,7 @@ async def open_rover(path_to_serial: Optional[str] = None):
         async with device_cxt as device:
             rover = Rover(nursery)
             await rover.set_device(device)
-            yield rover
+            await yield_(rover)
 
 
 class Rover:
@@ -42,7 +43,7 @@ class Rover:
         self._openrover_data_to_memory_channel = {i: trio.open_memory_channel(0) for i in
                                                   OPENROVER_DATA_ELEMENTS.keys()}
 
-    async def set_device(self, device: SerialTrio) -> trio.abc.ReceiveChannel[Tuple[int, Any]]:
+    async def set_device(self, device: SerialTrio):
         self._device = device
         self._rover_protocol = OpenRoverProtocol(device)
 
@@ -74,7 +75,7 @@ class Rover:
         with trio.fail_after(1):
             k, data = await self._rover_protocol.read_one()
             if k != index:
-                raise OpenRoverException(f'Received unexpected data. Expected {index}, received {k}:{data}')
+                raise OpenRoverException('Received unexpected data. Expected {}, received {}:{}'.format(index, k, data))
 
         return data
 
@@ -88,7 +89,8 @@ class Rover:
             with trio.fail_after(1):
                 k, data = await self._rover_protocol.read_one()
                 if k != index:
-                    raise OpenRoverException(f'Received unexpected data. Expected {index}, received {k}:{data}')
+                    raise OpenRoverException(
+                        'Received unexpected data. Expected {}, received {}:{}'.format(index, k, data))
             result[k] = data
 
         return result
@@ -105,4 +107,4 @@ async def get_openrover_version(port):
                     if k == 40:
                         return version
     except Exception as e:
-        raise OpenRoverException(f'Did not respond to request for OpenRover version') from e
+        raise OpenRoverException('Did not respond to request for OpenRover version') from e

@@ -1,4 +1,3 @@
-import dataclasses
 import enum
 from typing import Any, Tuple
 
@@ -9,12 +8,6 @@ from .serial_trio import SerialTrio
 from .util import OpenRoverException
 
 SERIAL_START_BYTE = bytes.fromhex('fd')
-
-
-@dataclasses.dataclass
-class CommandVerb2:
-    command_id: int
-    command_desc: str
 
 
 class CommandVerb(enum.IntEnum):
@@ -75,9 +68,8 @@ class OpenRoverProtocol:
                 return payload
             else:
                 raise OpenRoverException(
-                    f'Bad checksum {list(actual_checksum)},'
-                    f'expected {list(expected_checksum)}.'
-                    f'Discarding data {list(payload)}')
+                    'Bad checksum {}, expected {}. Discarding data {}'.format(list(actual_checksum),
+                                                                              list(expected_checksum), list(payload)))
 
     async def flush(self):
         await self._serial.flush(0)
