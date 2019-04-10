@@ -1,4 +1,4 @@
-from typing import AsyncContextManager, Awaitable, Optional, Sequence
+from typing import Awaitable, Optional, Sequence
 
 from async_generator import async_generator, asynccontextmanager, yield_
 from serial.tools.list_ports import comports
@@ -34,7 +34,7 @@ async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRo
 
 @asynccontextmanager
 @async_generator
-async def open_rover_device(*ports_to_try: Optional[str]) -> AsyncContextManager[SerialTrio]:
+async def open_rover_device(*ports_to_try: Optional[str]):
     """
     Enumerates serial devices until it finds one that responds to a request for OpenRover version. Returns that device.
     :param ports_to_try: if provided, the devices to attempt to open (e.g. 'COM3'). Otherwise, all FTDI devices will be attempted
