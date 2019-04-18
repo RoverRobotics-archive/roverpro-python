@@ -7,6 +7,7 @@ dist
 __pycache__/
 
 # virtual environment
+Pipfile
 Pipfile.lock
 .venv/
 
