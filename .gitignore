@@ -10,6 +10,7 @@ __pycache__/
 Pipfile
 Pipfile.lock
 .venv/
+venv/
 
 ### PyCharm ###
 # User-specific stuff
@@ -18,3 +19,5 @@ Pipfile.lock
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+
+\.DS_Store

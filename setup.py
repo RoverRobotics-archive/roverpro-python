@@ -1,3 +1,6 @@
 import setuptools
+import setuptools_scm
 
-setuptools.setup()
+assert setuptools_scm
+
+setuptools.setup(use_scm_version=True)

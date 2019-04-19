@@ -4,13 +4,10 @@ This is the official Python driver for the [Rover Robotics](https://roverrobotic
 
 ## Setup
 To install official releases from PyPi:
-```
-pip3 install openrover
-```
 
-To install specific releases from git for development, use the git url:
 ```
-pip3 install -e git+https://github.com/RoverRobotics/openrover_python_driver/#egg=openrover
+python -m pip install -U pip setuptools
+python -m pip install -U openrover --no-cache-dir
 ```
 
 ### Utilities
