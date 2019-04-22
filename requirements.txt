@@ -1,0 +1,5 @@
+setuptools>=30.3.0 # 30.3.0 is minimum for setup.cfg
+setuptools-scm
+-e .
+-e git+https://github.com/RoverRobotics/booty.git#egg=booty
+twine
