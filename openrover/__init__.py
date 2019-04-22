@@ -1,7 +1,7 @@
 from .openrover_protocol import OpenRoverProtocol
+from .rover import open_rover, Rover
 from .util import OpenRoverException
 
 name = 'openrover'
 
-# rover.OpenRover is not yet ready for primetime
-__all__ = ['OpenRoverException', 'OpenRoverProtocol']
+__all__ = ['OpenRoverException', 'OpenRoverProtocol', 'open_rover', 'Rover']
