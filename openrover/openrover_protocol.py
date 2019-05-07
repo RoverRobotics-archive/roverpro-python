@@ -29,6 +29,8 @@ class CommandVerb(enum.IntEnum):
     SET_BRAKE_ON_DRIVE_TIMEOUT = 11
     SET_MOTOR_SLOW_DECAY_MODE = 12
     SET_TIME_TO_FULL_SPEED_DECISECONDS = 13
+    SET_PWM_FREQUENCY_100HZ = 14
+    SET_SPEED_LIMIT_PERCENT = 15
 
 
 def encode_packet(*args: bytes):
