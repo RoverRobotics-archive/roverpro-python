@@ -44,7 +44,7 @@ class IntDataFormat(ReadDataFormat, WriteDataFormat):
         return int.from_bytes(b, byteorder='big', signed=self.signed)
 
 
-OPENROVER_LEGACY_VERSION = 16421
+OPENROVER_LEGACY_VERSION = 40621
 
 
 class OpenRoverFirmwareVersion:
