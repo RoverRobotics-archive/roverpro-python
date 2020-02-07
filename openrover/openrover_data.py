@@ -258,6 +258,28 @@ class DataFormatIgnored(WriteDataFormat):
     def __init__(self, n_bytes):
         self.n_bytes = n_bytes
 
+class SystemFaultFlag(Flag):
+    NONE = 0
+    OVERSPEED = auto()
+    OVERCURRENT = auto()
+
+class DataFormatSystemFault(ReadDataFormat):
+    def description(self):
+        return 'System fault bit flags'
+
+    def unpack(self, b: bytes):
+        u = UINT16.unpack(b)
+
+        bit_meanings = [SystemFaultFlag.OVERSPEED, SystemFaultFlag.OVERCURRENT]
+        if len(bit_meanings) <= u.bit_length():
+            raise ValueError('too many bits to unpack')
+
+        result = SystemFaultFlag.NONE
+        for i, flag in enumerate(bit_meanings):
+            if u & 1 << i:
+                result |= flag
+        return result
+
 
 class DataElement:
     def __init__(self, index: int, data_format: ReadDataFormat, name: str, description: str = None,
@@ -314,6 +336,9 @@ elements = [
     DataElement(72, DataFormatMotorStatus(), 'left motor status'),
     DataElement(74, DataFormatMotorStatus(), 'right motor status'),
     DataElement(76, DataFormatMotorStatus(), 'flipper motor status'),
+    DataElement(78, FAN_SPEED_RESPONSE_FORMAT, 'fan 1 duty'),
+    DataElement(80, FAN_SPEED_RESPONSE_FORMAT, 'fan 2 duty'),
+    DataElement(82, DataFormatSystemFault(), 'system fault flags'),
 ]
 
 OPENROVER_DATA_ELEMENTS = {e.index: e for e in elements}

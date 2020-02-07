@@ -13,7 +13,7 @@ from openrover.serial_trio import SerialTrio
 
 BAUDRATE = 57600
 
-SETTINGS_VERBS = list(map(CommandVerb, [*range(3, 10), *range(11, 16)]))
+SETTINGS_VERBS = list(map(CommandVerb, [*range(3, 10), *range(11, 19)]))
 
 
 def rover_command_arg_pair(arg):
