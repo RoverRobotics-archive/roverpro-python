@@ -65,6 +65,9 @@ class Rover:
         assert 0 <= fan_speed <= 1
         self._send_command(CommandVerb.SET_FAN_SPEED, int(fan_speed * 240))
 
+    def clear_system_fault(self):
+        self._send_command(CommandVerb.CLEAR_SYSTEM_FAULT, 0)
+
     def flipper_calibrate(self):
         self._send_command(CommandVerb.FLIPPER_CALIBRATE, int(CommandVerb.FLIPPER_CALIBRATE))
 
