@@ -1,15 +1,11 @@
-import sys
-# suppress warnings and print output correctly on Ubuntu. Must be done
-# before importing trio
-# https://github.com/python-trio/trio/issues/1065
-if sys.excepthook.__name__ == "apport_excepthook":
-    sys.excepthook = sys.__excepthook__
-import trio
-
 import argparse
+import subprocess
+import sys
 from distutils.version import LooseVersion
 from pathlib import Path
-import subprocess
+
+import trio
+
 from openrover import OpenRoverProtocol
 from openrover.find_device import get_ftdi_device_paths
 from openrover.openrover_protocol import CommandVerb
