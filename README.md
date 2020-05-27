@@ -3,18 +3,27 @@
 This is the official Python driver for the [Rover Robotics](https://roverrobotics.com/) "Open Rover Basic" robot. Use this as a starting point to get up and running quickly.
 
 ## Setup
+
 To install official releases from PyPi:
 
-```
+```shell script
 python -m pip install -U pip setuptools
 python -m pip install -U openrover --no-cache-dir
 ```
 
+On Linux, you may not have permission to access USB devices. If this is the case, run the following then restart your computer:
+
+```shell script
+sudo usermod -a -G dialout $(whoami)
+```
+
 ### Utilities
+
 ### pitstop
+
 Pitstop is a new utility to bootload your rover and set options. After installing, you can invoke it with `pitstop` or `python3 -m openrover.pitstop`.
 
-```
+```text
 > pitstop --help
 usage: pitstop [-h] [-p port] [-f path/to/firmware.hex] [-m version]
                [-u k:v [k:v ...]]
@@ -48,7 +57,7 @@ optional arguments:
 To run tests, first attach the rover via breakout cable then run either `openrover-test` or `python3 -m openrover.test`.
 By default, tests that involve running the motors will be skipped, since you may not want a rover ripping cables out of your computer. If you have made sure running the motors will not damage anything, these tests can be opted in with the flag `--motorok`.
 
-```
+```text
 > openrover-test
 ==================== test session starts =====================
 platform win32 -- Python 3.7.3, pytest-4.3.1, py-1.8.0, pluggy-0.9.0
