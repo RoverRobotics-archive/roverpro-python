@@ -1,26 +1,24 @@
-from math import isclose
 import statistics
+from math import isclose
 
-from async_generator import async_generator, yield_
 import pytest
 import trio
 
 from openrover.openrover_data import (
+    fix_encoder_delta,
     MotorStatusFlag,
     OPENROVER_DATA_ELEMENTS,
     OpenRoverFirmwareVersion,
-    fix_encoder_delta,
 )
-from openrover.rover import Rover, open_rover
+from openrover.rover import open_rover, Rover
 from openrover.util import OpenRoverException, RoverDeviceNotFound
 
 
 @pytest.fixture
-@async_generator
 async def rover():
     try:
         async with open_rover() as r:
-            await yield_(r)
+            yield r
     except RoverDeviceNotFound:
         pytest.skip('This test requires a rover device but none was found')
 

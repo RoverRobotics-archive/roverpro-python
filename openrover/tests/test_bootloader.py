@@ -1,9 +1,8 @@
-from pathlib import Path
 import shutil
 import subprocess
+from pathlib import Path
 from subprocess import list2cmdline
 
-from async_generator import async_generator, yield_
 import pytest
 import trio
 
@@ -15,11 +14,10 @@ from openrover.util import RoverDeviceNotFound
 
 
 @pytest.fixture
-@async_generator
 async def device():
     try:
         async with open_rover_device() as dev:
-            await yield_(dev)
+            yield dev
     except RoverDeviceNotFound:
         pytest.skip('No openrover device found')
 
@@ -146,7 +144,6 @@ async def stream_to_string(stream: trio.abc.ReceiveStream):
     return buf
 
 
-@async_generator
 async def stream_to_lines(stream: trio.abc.ReceiveStream):
     buf = ''
     async with stream:
@@ -157,6 +154,6 @@ async def stream_to_lines(stream: trio.abc.ReceiveStream):
             buf += new_bytes.decode()
             *some_lines, buf = buf.splitlines()
             for line in some_lines:
-                await yield_(line)
+                yield line
         if buf != '':
-            await yield_(buf)
+            yield buf

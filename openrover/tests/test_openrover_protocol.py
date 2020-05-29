@@ -1,6 +1,5 @@
 import statistics
 
-from async_generator import async_generator, yield_
 import pytest
 import trio
 
@@ -13,11 +12,10 @@ n = 100
 
 
 @pytest.fixture
-@async_generator
 async def protocol():
     try:
         async with open_rover_device() as r:
-            await yield_(OpenRoverProtocol(r))
+            yield OpenRoverProtocol(r)
     except RoverDeviceNotFound:
         pytest.skip('This test requires a rover device but none was found')
 

@@ -1,8 +1,8 @@
 from typing import Awaitable, Optional, Sequence
 
-from async_generator import async_generator, asynccontextmanager, yield_
-from serial.tools.list_ports import comports
 import trio
+from async_generator import asynccontextmanager
+from serial.tools.list_ports import comports
 
 from openrover.openrover_data import OpenRoverFirmwareVersion
 from openrover.serial_trio import SerialTrio
@@ -37,7 +37,6 @@ async def get_openrover_protocol_version(
 
 
 @asynccontextmanager
-@async_generator
 async def open_rover_device(*ports_to_try: Optional[str]):
     """
     Enumerates serial devices until it finds one that responds to a request for OpenRover version. Returns that device.
@@ -49,7 +48,7 @@ async def open_rover_device(*ports_to_try: Optional[str]):
         async with SerialTrio(port, **DEFAULT_SERIAL_KWARGS) as device:
             try:
                 await get_openrover_protocol_version(device)
-                await yield_(device)
+                yield device
                 return
             except OpenRoverException as e:
                 exc_args.append((port, e))

@@ -1,7 +1,7 @@
 from typing import Any, Dict, Iterable, Optional
 
-from async_generator import async_generator, asynccontextmanager, yield_
 import trio
+from async_generator import asynccontextmanager
 
 from openrover.find_device import open_rover_device
 from openrover.openrover_data import OPENROVER_DATA_ELEMENTS
@@ -11,7 +11,6 @@ from .util import OpenRoverException
 
 
 @asynccontextmanager
-@async_generator
 async def open_rover(path_to_serial: Optional[str] = None):
     async with trio.open_nursery() as nursery:
         if path_to_serial is None:
@@ -22,7 +21,7 @@ async def open_rover(path_to_serial: Optional[str] = None):
         async with device_cxt as device:
             rover = Rover(nursery)
             await rover.set_device(device)
-            await yield_(rover)
+            yield rover
 
 
 class Rover:
