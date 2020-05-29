@@ -78,14 +78,14 @@ async def amain():
             print('No devices found')
             exit(1)
         if len(ports) > 1:
-            print('Multiple devices found: {}'.format(', '.join(ports)))
+            print(f"Multiple devices found: {', '.join(ports)}")
         port = ports[0]
-    print('Using device {}'.format(port))
+    print(f'Using device {port}')
 
     if args.flash is not None:
         hexfile = Path(args.flash)
         if not hexfile.is_file():
-            print('Could not bootload. Hex file {} does not exist.'.format(hexfile.absolute()))
+            print(f'Could not bootload. Hex file {hexfile.absolute()} does not exist.')
             exit(1)
 
         async with SerialTrio(port, baudrate=BAUDRATE) as ser:
@@ -109,7 +109,7 @@ async def amain():
             '--load',
             '--verify',
         ]
-        print('invoking bootloader: {}'.format(subprocess.list2cmdline(pargs)))
+        print(f'invoking bootloader: {subprocess.list2cmdline(pargs)}')
         subprocess.check_call(pargs)
 
         print('starting firmware')
@@ -119,7 +119,7 @@ async def amain():
     if args.minimumversion is not None:
         expected_version = args.minimumversion
         actual_version = None
-        print('Expecting version at least {}'.format(expected_version))
+        print(f'Expecting version at least {expected_version}')
         async with SerialTrio(port, baudrate=BAUDRATE) as device:
             orp = OpenRoverProtocol(device)
             orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
@@ -132,7 +132,7 @@ async def amain():
             print('could not get version')
             exit(1)
         else:
-            print('Actual version = {}'.format(actual_version))
+            print(f'Actual version = {actual_version}')
         if LooseVersion(str(actual_version)) < expected_version:
             print('Failed!')
             exit(1)
@@ -143,7 +143,7 @@ async def amain():
             print('Loading settings from non-volatile memory')
             orp.write_nowait(0, 0, 0, CommandVerb.RELOAD_SETTINGS, 0)
             for k, v in args.updatesettings or ():
-                print('\tSetting {} ({}) = {}'.format(k.value, k.name, v))
+                print(f'\tSetting {k.value} ({k.name}) = {v}')
                 orp.write_nowait(0, 0, 0, k, v)
             print('Saving settings to non-volatile memory')
             print()

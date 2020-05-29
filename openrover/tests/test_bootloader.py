@@ -104,7 +104,7 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                                 a_line = await line_generator.__anext__()
                             lines.append(a_line)
                     except trio.TooSlowError:
-                        pytest.fail('booty became unresponsive after output {}'.format(lines))
+                        pytest.fail(f'booty became unresponsive after output {lines}')
                     except StopAsyncIteration:
                         pass
                     await trio.sleep(1)

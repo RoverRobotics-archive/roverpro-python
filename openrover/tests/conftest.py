@@ -41,7 +41,7 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_motors)
 
     if not config.getoption(BOOTLOAD_OPT):
-        skip_bootload = pytest.mark.skip(reason='Need {} option to run'.format(BOOTLOAD_OPT))
+        skip_bootload = pytest.mark.skip(reason=f'Need {BOOTLOAD_OPT} option to run')
         for item in items:
             if 'bootload' in item.keywords:
                 item.add_marker(skip_bootload)

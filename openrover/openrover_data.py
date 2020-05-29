@@ -35,7 +35,7 @@ class IntDataFormat(ReadDataFormat, WriteDataFormat):
     def description(self):
         s = 'signed' if self.signed else 'unsigned'
         n = self.nbytes * 8
-        return '{} integer ({} bits)'.format(s, n)
+        return f'{s} integer ({n} bits)'
 
     def pack(self, value):
         return int(value).to_bytes(self.nbytes, byteorder='big', signed=self.signed)
@@ -57,7 +57,7 @@ class OpenRoverFirmwareVersion:
         return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
 
     def __str__(self):
-        return '{}.{}.{}'.format(self.major, self.minor, self.patch)
+        return f'{self.major}.{self.minor}.{self.patch}'
 
     @property
     def major(self):
@@ -254,7 +254,7 @@ class DataFormatMotorStatus(ReadDataFormat):
 
 class DataFormatIgnored(WriteDataFormat):
     def description(self):
-        return 'Ignored data {} bytes long'.format(self.n_bytes)
+        return f'Ignored data {self.n_bytes} bytes long'
 
     def pack(self, value=None) -> bytes:
         assert value is None
@@ -414,7 +414,7 @@ OPENROVER_DATA_ELEMENTS = {e.index: e for e in elements}
 
 
 def strike(s):
-    return '~~{}~~'.format(s)
+    return f'~~{s}~~'
 
 
 def doc():

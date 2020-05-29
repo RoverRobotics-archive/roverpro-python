@@ -82,9 +82,7 @@ class Rover:
             k, data = await self._rover_protocol.read_one()
             if k != index:
                 raise OpenRoverException(
-                    'Received unexpected data. Expected {}, received {}:{}'.format(
-                        index, k, data
-                    )
+                    f'Received unexpected data. Expected {index}, received {k}:{data}'
                 )
 
         return data

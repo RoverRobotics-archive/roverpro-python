@@ -71,7 +71,7 @@ class SerialTrio(trio.abc.AsyncResource):
                 await trio.sleep(0.001)
             return bytes(line)
         except trio.Cancelled:
-            logging.exception('Abandoning data: {}'.format(line))
+            logging.exception(f'Abandoning data: {line}')
             self._serial.cancel_read()
             raise
 
