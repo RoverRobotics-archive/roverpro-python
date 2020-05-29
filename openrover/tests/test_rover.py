@@ -5,8 +5,12 @@ from async_generator import async_generator, yield_
 import pytest
 import trio
 
-from openrover.openrover_data import MotorStatusFlag, OPENROVER_DATA_ELEMENTS, OpenRoverFirmwareVersion, \
-    fix_encoder_delta
+from openrover.openrover_data import (
+    MotorStatusFlag,
+    OPENROVER_DATA_ELEMENTS,
+    OpenRoverFirmwareVersion,
+    fix_encoder_delta,
+)
 from openrover.rover import Rover, open_rover
 from openrover.util import OpenRoverException, RoverDeviceNotFound
 
@@ -105,8 +109,12 @@ async def test_encoder_intervals(rover, motor_effort):
         enc_intervals_left.append(data[28])
         enc_intervals_right.append(data[30])
 
-    encoder_delta_left = [fix_encoder_delta(a - b) for a, b in zip(enc_counts_left[1:], enc_counts_left)]
-    encoder_delta_right = [fix_encoder_delta(a - b) for a, b in zip(enc_counts_right[1:], enc_counts_right)]
+    encoder_delta_left = [
+        fix_encoder_delta(a - b) for a, b in zip(enc_counts_left[1:], enc_counts_left)
+    ]
+    encoder_delta_right = [
+        fix_encoder_delta(a - b) for a, b in zip(enc_counts_right[1:], enc_counts_right)
+    ]
 
     if motor_effort == 0:
         assert all(i == 0 for i in encoder_delta_left)
@@ -134,7 +142,9 @@ async def test_currents(rover):
     assert isclose(battery_current_b, abs(battery_current_b_i2c), rel_tol=0.05, abs_tol=0.2)
 
     battery_current_total = await rover.get_data(0)
-    assert isclose(battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=0.2)
+    assert isclose(
+        battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=0.2
+    )
 
 
 async def test_soc(rover):

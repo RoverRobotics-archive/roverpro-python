@@ -35,7 +35,9 @@ def powerboard_firmware_file():
 def booty_exe():
     maybe_booty = shutil.which('booty')
     if maybe_booty is None:
-        pytest.skip('Could not test bootloader. Booty executable does not exist or is not in the executable path.')
+        pytest.skip(
+            'Could not test bootloader. Booty executable does not exist or is not in the executable path.'
+        )
     p = Path(maybe_booty)
     assert p.is_file()
     return p
@@ -76,12 +78,15 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
         # flash rover firmware
         args = [
             str(booty_exe),
-            '--port', str(port),
-            '--baudrate', '57600',
-            '--hexfile', str(powerboard_firmware_file.absolute()),
+            '--port',
+            str(port),
+            '--baudrate',
+            '57600',
+            '--hexfile',
+            str(powerboard_firmware_file.absolute()),
             '--erase',
             '--load',
-            '--verify'
+            '--verify',
         ]
 
     print('running bootloader: ' + list2cmdline(args))
@@ -89,6 +94,7 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
     with trio.fail_after(60 * 15):
         async with trio.Process(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as booty:
             async with trio.open_nursery() as nursery:
+
                 async def check_stdout():
                     line_generator = stream_to_lines(booty.stdout)
                     lines = []
@@ -107,7 +113,9 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                 async def check_stderr():
                     error_output = await stream_to_string(booty.stderr)
                     if 'device not responding' in error_output:
-                        pytest.fail('Rover did not respond to booty. Does it have a bootloader?')
+                        pytest.fail(
+                            'Rover did not respond to booty. Does it have a bootloader?'
+                        )
                     assert error_output.strip() == ''
 
                 async def check_retcode():

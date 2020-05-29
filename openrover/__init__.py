@@ -3,7 +3,7 @@
 # https://github.com/python-trio/trio/issues/1065
 import sys
 
-if sys.excepthook.__name__ == "apport_excepthook":
+if sys.excepthook.__name__ == 'apport_excepthook':
     sys.excepthook = sys.__excepthook__
 
 from .openrover_protocol import OpenRoverProtocol

@@ -74,16 +74,26 @@ class OpenRoverProtocol:
                 return payload
             else:
                 raise OpenRoverException(
-                    'Bad checksum {}, expected {}. Discarding data {}'.format(list(actual_checksum),
-                                                                              list(expected_checksum), list(payload)))
+                    'Bad checksum {}, expected {}. Discarding data {}'.format(
+                        list(actual_checksum), list(expected_checksum), list(payload)
+                    )
+                )
 
     async def flush(self):
         await self._serial.flush(0)
 
-    def write_nowait(self, motor_left: float, motor_right: float, flipper: float, command_verb: CommandVerb,
-                     command_arg: int):
-        binary = encode_packet(MOTOR_EFFORT_FORMAT.pack(motor_left),
-                               MOTOR_EFFORT_FORMAT.pack(motor_right),
-                               MOTOR_EFFORT_FORMAT.pack(flipper),
-                               bytes([command_verb, command_arg]))
+    def write_nowait(
+        self,
+        motor_left: float,
+        motor_right: float,
+        flipper: float,
+        command_verb: CommandVerb,
+        command_arg: int,
+    ):
+        binary = encode_packet(
+            MOTOR_EFFORT_FORMAT.pack(motor_left),
+            MOTOR_EFFORT_FORMAT.pack(motor_right),
+            MOTOR_EFFORT_FORMAT.pack(flipper),
+            bytes([command_verb, command_arg]),
+        )
         self._serial.write_nowait(binary)

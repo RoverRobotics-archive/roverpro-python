@@ -17,7 +17,9 @@ def get_ftdi_device_paths() -> Sequence[str]:
     return [comport.device for comport in comports() if comport.manufacturer == 'FTDI']
 
 
-async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRoverFirmwareVersion]:
+async def get_openrover_protocol_version(
+    device: SerialTrio
+) -> Awaitable[OpenRoverFirmwareVersion]:
     try:
         with trio.fail_after(1):
             orp = OpenRoverProtocol(device)
@@ -27,7 +29,9 @@ async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRo
                 if k == 40:
                     return version
     except trio.TooSlowError as e:
-        raise OpenRoverException('Device did not respond to a request for version. Is it on?') from e
+        raise OpenRoverException(
+            'Device did not respond to a request for version. Is it on?'
+        ) from e
     except Exception as e:
         raise OpenRoverException('Device did not return a valid openrover version', e) from e
 

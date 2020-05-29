@@ -40,8 +40,9 @@ class Rover:
         self._motor_right = 0
         self._motor_flipper = 0
         self._nursery = nursery
-        self._openrover_data_to_memory_channel = {i: trio.open_memory_channel(0) for i in
-                                                  OPENROVER_DATA_ELEMENTS.keys()}
+        self._openrover_data_to_memory_channel = {
+            i: trio.open_memory_channel(0) for i in OPENROVER_DATA_ELEMENTS.keys()
+        }
 
     async def set_device(self, device: SerialTrio):
         self._device = device
@@ -56,7 +57,9 @@ class Rover:
         self._motor_flipper = flipper
 
     def _send_command(self, cmd, arg):
-        self._rover_protocol.write_nowait(self._motor_left, self._motor_right, self._motor_flipper, cmd, arg)
+        self._rover_protocol.write_nowait(
+            self._motor_left, self._motor_right, self._motor_flipper, cmd, arg
+        )
 
     def send_speed(self):
         self._send_command(CommandVerb.NOP, 0)
@@ -78,7 +81,11 @@ class Rover:
         with trio.fail_after(1):
             k, data = await self._rover_protocol.read_one()
             if k != index:
-                raise OpenRoverException('Received unexpected data. Expected {}, received {}:{}'.format(index, k, data))
+                raise OpenRoverException(
+                    'Received unexpected data. Expected {}, received {}:{}'.format(
+                        index, k, data
+                    )
+                )
 
         return data
 
@@ -93,7 +100,10 @@ class Rover:
                 k, data = await self._rover_protocol.read_one()
                 if k != index:
                     raise OpenRoverException(
-                        'Received unexpected data. Expected {}, received {}:{}'.format(index, k, data))
+                        'Received unexpected data. Expected {}, received {}:{}'.format(
+                            index, k, data
+                        )
+                    )
             result[k] = data
 
         return result

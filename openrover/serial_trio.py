@@ -25,17 +25,22 @@ class SerialTrio(trio.abc.AsyncResource):
     def __init__(self, port, **serial_kwargs):
         """Wrapper for pyserial that makes it work better with async"""
         self.port = port
-        self.serial_kwargs = dict(write_timeout=0, inter_byte_timeout=None, timeout=0, **serial_kwargs)
+        self.serial_kwargs = dict(
+            write_timeout=0, inter_byte_timeout=None, timeout=0, **serial_kwargs
+        )
         try:
             self._serial = serial.Serial(self.port, **self.serial_kwargs)
         except serial.SerialException as e:
             if 'FileNotFoundError' in e.args[0]:
-                raise OpenRoverException("Could not connect to serial device - file not found. Is it connected?",
-                                         self.port) from e
+                raise OpenRoverException(
+                    'Could not connect to serial device - file not found. Is it connected?',
+                    self.port,
+                ) from e
             if 'PermissionError' in e.args[0]:
                 raise OpenRoverException(
-                    "Could not connect to serial device - permission error. Is it open in another process? Does this user have OS permission?",
-                    self.port) from e
+                    'Could not connect to serial device - permission error. Is it open in another process? Does this user have OS permission?',
+                    self.port,
+                ) from e
             raise
 
     @property
@@ -49,7 +54,11 @@ class SerialTrio(trio.abc.AsyncResource):
 
     def _read_bytes_nowait(self, n_max):
         if self._inbound_high_water <= self.in_waiting:
-            warnings.warn('Incoming buffer is backlogged. Data may be lost. {} bytes'.format(self._serial.in_waiting))
+            warnings.warn(
+                'Incoming buffer is backlogged. Data may be lost. {} bytes'.format(
+                    self._serial.in_waiting
+                )
+            )
         return self._serial.read(n_max)
 
     async def read_until(self, terminator):
@@ -76,12 +85,20 @@ class SerialTrio(trio.abc.AsyncResource):
     def write_nowait(self, data):
         self._serial.write(data)
         if self._outbound_high_water <= self._serial.out_waiting:
-            warnings.warn('Outgoing buffer is backlogged. Data may be lost. {} bytes'.format(self._serial.out_waiting))
+            warnings.warn(
+                'Outgoing buffer is backlogged. Data may be lost. {} bytes'.format(
+                    self._serial.out_waiting
+                )
+            )
 
     async def write(self, data):
         self._serial.write(data)
         if self._outbound_high_water <= self._serial.out_waiting:
-            warnings.warn('Outgoing buffer is backlogged. Data may be lost. {} bytes'.format(self._serial.out_waiting))
+            warnings.warn(
+                'Outgoing buffer is backlogged. Data may be lost. {} bytes'.format(
+                    self._serial.out_waiting
+                )
+            )
         try:
             await self.flush()
         except trio.Cancelled():
