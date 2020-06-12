@@ -1,14 +1,20 @@
-# OpenRover Python3 Driver
+# OpenRover Python Suite
 
 This is the official Python driver for the [Rover Robotics](https://roverrobotics.com/) "Open Rover Basic" robot. Use this as a starting point to get up and running quickly.
+
+Included in this package are:
+
+1. A Python library for programmatically interfacing with the Rover over USB
+2. A command line application "`pitstop`" for upgrading and configuring the Rover firmware
+3. A test suite that confirms the Firmware and hardware are operating as expected.
 
 ## Setup
 
 To install official releases from PyPi:
 
 ```shell script
-python -m pip install -U pip setuptools
-python -m pip install -U openrover --no-cache-dir
+python3 -m pip install -U pip setuptools
+python3 -m pip install -U openrover --no-cache-dir
 ```
 
 On Linux, you may not have permission to access USB devices. If this is the case, run the following then restart your computer:
@@ -16,8 +22,6 @@ On Linux, you may not have permission to access USB devices. If this is the case
 ```shell script
 sudo usermod -a -G dialout $(whoami)
 ```
-
-### Utilities
 
 ### pitstop
 
