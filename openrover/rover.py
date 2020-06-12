@@ -81,7 +81,7 @@ class Rover:
             k, data = await self._rover_protocol.read_one()
             if k != index:
                 raise OpenRoverException(
-                    f'Received unexpected data. Expected {index}, received {k}:{data}'
+                    f"Received unexpected data. Expected {index}, received {k}:{data}"
                 )
 
         return data
@@ -97,7 +97,7 @@ class Rover:
                 k, data = await self._rover_protocol.read_one()
                 if k != index:
                     raise OpenRoverException(
-                        'Received unexpected data. Expected {}, received {}:{}'.format(
+                        "Received unexpected data. Expected {}, received {}:{}".format(
                             index, k, data
                         )
                     )
@@ -117,4 +117,4 @@ async def get_openrover_version(port):
                     if k == 40:
                         return version
     except Exception as e:
-        raise OpenRoverException('Did not respond to request for OpenRover version') from e
+        raise OpenRoverException("Did not respond to request for OpenRover version") from e

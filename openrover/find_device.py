@@ -14,11 +14,11 @@ DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, stopbits=1)
 
 
 def get_ftdi_device_paths() -> Sequence[str]:
-    return [comport.device for comport in comports() if comport.manufacturer == 'FTDI']
+    return [comport.device for comport in comports() if comport.manufacturer == "FTDI"]
 
 
 async def get_openrover_protocol_version(
-    device: SerialTrio
+    device: SerialTrio,
 ) -> Awaitable[OpenRoverFirmwareVersion]:
     try:
         with trio.fail_after(1):
@@ -30,10 +30,10 @@ async def get_openrover_protocol_version(
                     return version
     except trio.TooSlowError as e:
         raise OpenRoverException(
-            'Device did not respond to a request for version. Is it on?'
+            "Device did not respond to a request for version. Is it on?"
         ) from e
     except Exception as e:
-        raise OpenRoverException('Device did not return a valid openrover version', e) from e
+        raise OpenRoverException("Device did not return a valid openrover version", e) from e
 
 
 @asynccontextmanager

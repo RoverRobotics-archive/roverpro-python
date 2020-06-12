@@ -20,7 +20,7 @@ async def rover():
         async with open_rover() as r:
             yield r
     except RoverDeviceNotFound:
-        pytest.skip('This test requires a rover device but none was found')
+        pytest.skip("This test requires a rover device but none was found")
 
 
 async def test_find_openrover(rover):
@@ -40,7 +40,7 @@ async def test_get_version(rover):
 
 
 async def test_recover_from_bad_data(rover):
-    await rover._rover_protocol._serial.write(b'test' * 20)
+    await rover._rover_protocol._serial.write(b"test" * 20)
 
     for i in range(3):
         try:
@@ -54,7 +54,7 @@ async def test_recover_from_bad_data(rover):
 
 async def test_missing_device():
     with pytest.raises(OpenRoverException):
-        async with open_rover('missing_device'):
+        async with open_rover("missing_device"):
             pass
 
 
@@ -84,7 +84,7 @@ async def test_get_all_data_elements(rover):
             assert v is not None
 
 
-@pytest.mark.parametrize('motor_effort', [0, -0.1, +0.1, -0.2, +0.2, 0])
+@pytest.mark.parametrize("motor_effort", [0, -0.1, +0.1, -0.2, +0.2, 0])
 @pytest.mark.motor
 async def test_encoder_intervals(rover, motor_effort):
     enc_counts_left = []
@@ -200,14 +200,14 @@ async def test_temperatures(rover):
 
 async def test_motor_status_braked(rover):
     rover.set_motor_speeds(0, 0, 0)
-    statuses = await rover.get_data(72), await rover.get_data(74), await rover.get_data(76)
+    statuses = (await rover.get_data(72), await rover.get_data(74), await rover.get_data(76))
     for s in statuses:
         assert isinstance(s, MotorStatusFlag)
         assert MotorStatusFlag.BRAKE in s
 
 
 @pytest.mark.motor
-@pytest.mark.parametrize('forward', [True, False], ids=['forward', 'reverse'])
+@pytest.mark.parametrize("forward", [True, False], ids=["forward", "reverse"])
 async def test_motor_status_moving(rover, forward):
     speed = 0.2
     if forward:
@@ -219,7 +219,7 @@ async def test_motor_status_moving(rover, forward):
         rover.send_speed()
         await trio.sleep(0.15)
 
-    statuses = await rover.get_data(72), await rover.get_data(74), await rover.get_data(76)
+    statuses = (await rover.get_data(72), await rover.get_data(74), await rover.get_data(76))
 
     for s in statuses:
         assert isinstance(s, MotorStatusFlag)

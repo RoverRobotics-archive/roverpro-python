@@ -31,14 +31,14 @@ class SerialTrio(trio.abc.AsyncResource):
         try:
             self._serial = serial.Serial(self.port, **self.serial_kwargs)
         except serial.SerialException as e:
-            if 'FileNotFoundError' in e.args[0]:
+            if "FileNotFoundError" in e.args[0]:
                 raise OpenRoverException(
-                    'Could not connect to serial device - file not found. Is it connected?',
+                    "Could not connect to serial device - file not found. Is it connected?",
                     self.port,
                 ) from e
-            if 'PermissionError' in e.args[0]:
+            if "PermissionError" in e.args[0]:
                 raise OpenRoverException(
-                    'Could not connect to serial device - permission error. Is it open in another process? Does this user have OS permission?',
+                    "Could not connect to serial device - permission error. Is it open in another process? Does this user have OS permission?",
                     self.port,
                 ) from e
             raise
@@ -55,7 +55,7 @@ class SerialTrio(trio.abc.AsyncResource):
     def _read_bytes_nowait(self, n_max):
         if self._inbound_high_water <= self.in_waiting:
             warnings.warn(
-                'Incoming buffer is backlogged. Data may be lost. {} bytes'.format(
+                "Incoming buffer is backlogged. Data may be lost. {} bytes".format(
                     self._serial.in_waiting
                 )
             )
@@ -63,7 +63,7 @@ class SerialTrio(trio.abc.AsyncResource):
 
     async def read_until(self, terminator):
         terminator = bytes(terminator)
-        assert terminator != b''
+        assert terminator != b""
         line = bytearray()
         try:
             while not line.endswith(terminator):
@@ -71,7 +71,7 @@ class SerialTrio(trio.abc.AsyncResource):
                 await trio.sleep(0.001)
             return bytes(line)
         except trio.Cancelled:
-            logging.exception(f'Abandoning data: {line}')
+            logging.exception(f"Abandoning data: {line}")
             self._serial.cancel_read()
             raise
 
@@ -86,7 +86,7 @@ class SerialTrio(trio.abc.AsyncResource):
         self._serial.write(data)
         if self._outbound_high_water <= self._serial.out_waiting:
             warnings.warn(
-                'Outgoing buffer is backlogged. Data may be lost. {} bytes'.format(
+                "Outgoing buffer is backlogged. Data may be lost. {} bytes".format(
                     self._serial.out_waiting
                 )
             )
@@ -95,7 +95,7 @@ class SerialTrio(trio.abc.AsyncResource):
         self._serial.write(data)
         if self._outbound_high_water <= self._serial.out_waiting:
             warnings.warn(
-                'Outgoing buffer is backlogged. Data may be lost. {} bytes'.format(
+                "Outgoing buffer is backlogged. Data may be lost. {} bytes".format(
                     self._serial.out_waiting
                 )
             )
