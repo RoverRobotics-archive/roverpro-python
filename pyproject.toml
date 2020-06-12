@@ -1,0 +1,46 @@
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry]
+name = "openrover"
+version = "2.0.0-alpha.0"
+description = "A Python driver for driving the Rover Robotics OpenRover Basic robot"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: OS Independent",
+  "Framework :: Trio"
+]
+repository = "https://github.com/RoverRobotics/openrover_python_driver"
+authors = [
+  "Rover Robotics <info@roverrobotics.com>",
+]
+maintainers = [
+  "Dan Rose <dan@digilabs.io>"
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+booty = "^0.3.0"
+pyserial = "^3.4"
+pytest = "^5.4.2"
+pytest-trio = "^0.6.0"
+python = "^3.6"
+trio = "^0.15.1"
+async_generator = "^1.10"
+
+[tool.poetry.dev-dependencies]
+poetry-githooks = {version = "^1.1.1", python = "^3.7"}
+black = "^19.10b0"
+
+[tool.githooks]
+pre-commit = "black ."
+
+[tool.black]
+line-length = 99

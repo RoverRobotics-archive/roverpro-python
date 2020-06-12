@@ -1,24 +1,26 @@
-from math import isclose
 import statistics
+from math import isclose
 
-from async_generator import async_generator, yield_
 import pytest
 import trio
 
-from openrover.openrover_data import MotorStatusFlag, OPENROVER_DATA_ELEMENTS, OpenRoverFirmwareVersion, \
-    fix_encoder_delta
-from openrover.rover import Rover, open_rover
+from openrover.openrover_data import (
+    fix_encoder_delta,
+    MotorStatusFlag,
+    OPENROVER_DATA_ELEMENTS,
+    OpenRoverFirmwareVersion,
+)
+from openrover.rover import open_rover, Rover
 from openrover.util import OpenRoverException, RoverDeviceNotFound
 
 
 @pytest.fixture
-@async_generator
 async def rover():
     try:
         async with open_rover() as r:
-            await yield_(r)
+            yield r
     except RoverDeviceNotFound:
-        pytest.skip('This test requires a rover device but none was found')
+        pytest.skip("This test requires a rover device but none was found")
 
 
 async def test_find_openrover(rover):
@@ -38,7 +40,7 @@ async def test_get_version(rover):
 
 
 async def test_recover_from_bad_data(rover):
-    await rover._rover_protocol._serial.write(b'test' * 20)
+    await rover._rover_protocol._serial.write(b"test" * 20)
 
     for i in range(3):
         try:
@@ -52,7 +54,7 @@ async def test_recover_from_bad_data(rover):
 
 async def test_missing_device():
     with pytest.raises(OpenRoverException):
-        async with open_rover('missing_device'):
+        async with open_rover("missing_device"):
             pass
 
 
@@ -82,7 +84,7 @@ async def test_get_all_data_elements(rover):
             assert v is not None
 
 
-@pytest.mark.parametrize('motor_effort', [0, -0.1, +0.1, -0.2, +0.2, 0])
+@pytest.mark.parametrize("motor_effort", [0, -0.1, +0.1, -0.2, +0.2, 0])
 @pytest.mark.motor
 async def test_encoder_intervals(rover, motor_effort):
     enc_counts_left = []
@@ -105,8 +107,12 @@ async def test_encoder_intervals(rover, motor_effort):
         enc_intervals_left.append(data[28])
         enc_intervals_right.append(data[30])
 
-    encoder_delta_left = [fix_encoder_delta(a - b) for a, b in zip(enc_counts_left[1:], enc_counts_left)]
-    encoder_delta_right = [fix_encoder_delta(a - b) for a, b in zip(enc_counts_right[1:], enc_counts_right)]
+    encoder_delta_left = [
+        fix_encoder_delta(a - b) for a, b in zip(enc_counts_left[1:], enc_counts_left)
+    ]
+    encoder_delta_right = [
+        fix_encoder_delta(a - b) for a, b in zip(enc_counts_right[1:], enc_counts_right)
+    ]
 
     if motor_effort == 0:
         assert all(i == 0 for i in encoder_delta_left)
@@ -134,7 +140,9 @@ async def test_currents(rover):
     assert isclose(battery_current_b, abs(battery_current_b_i2c), rel_tol=0.05, abs_tol=0.2)
 
     battery_current_total = await rover.get_data(0)
-    assert isclose(battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=0.2)
+    assert isclose(
+        battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=0.2
+    )
 
 
 async def test_soc(rover):
@@ -192,14 +200,14 @@ async def test_temperatures(rover):
 
 async def test_motor_status_braked(rover):
     rover.set_motor_speeds(0, 0, 0)
-    statuses = await rover.get_data(72), await rover.get_data(74), await rover.get_data(76)
+    statuses = (await rover.get_data(72), await rover.get_data(74), await rover.get_data(76))
     for s in statuses:
         assert isinstance(s, MotorStatusFlag)
         assert MotorStatusFlag.BRAKE in s
 
 
 @pytest.mark.motor
-@pytest.mark.parametrize('forward', [True, False], ids=['forward', 'reverse'])
+@pytest.mark.parametrize("forward", [True, False], ids=["forward", "reverse"])
 async def test_motor_status_moving(rover, forward):
     speed = 0.2
     if forward:
@@ -211,7 +219,7 @@ async def test_motor_status_moving(rover, forward):
         rover.send_speed()
         await trio.sleep(0.15)
 
-    statuses = await rover.get_data(72), await rover.get_data(74), await rover.get_data(76)
+    statuses = (await rover.get_data(72), await rover.get_data(74), await rover.get_data(76))
 
     for s in statuses:
         assert isinstance(s, MotorStatusFlag)

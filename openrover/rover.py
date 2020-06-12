@@ -1,7 +1,7 @@
 from typing import Any, Dict, Iterable, Optional
 
-from async_generator import async_generator, asynccontextmanager, yield_
 import trio
+from async_generator import asynccontextmanager
 
 from openrover.find_device import open_rover_device
 from openrover.openrover_data import OPENROVER_DATA_ELEMENTS
@@ -11,7 +11,6 @@ from .util import OpenRoverException
 
 
 @asynccontextmanager
-@async_generator
 async def open_rover(path_to_serial: Optional[str] = None):
     async with trio.open_nursery() as nursery:
         if path_to_serial is None:
@@ -22,7 +21,7 @@ async def open_rover(path_to_serial: Optional[str] = None):
         async with device_cxt as device:
             rover = Rover(nursery)
             await rover.set_device(device)
-            await yield_(rover)
+            yield rover
 
 
 class Rover:
@@ -40,8 +39,9 @@ class Rover:
         self._motor_right = 0
         self._motor_flipper = 0
         self._nursery = nursery
-        self._openrover_data_to_memory_channel = {i: trio.open_memory_channel(0) for i in
-                                                  OPENROVER_DATA_ELEMENTS.keys()}
+        self._openrover_data_to_memory_channel = {
+            i: trio.open_memory_channel(0) for i in OPENROVER_DATA_ELEMENTS.keys()
+        }
 
     async def set_device(self, device: SerialTrio):
         self._device = device
@@ -56,7 +56,9 @@ class Rover:
         self._motor_flipper = flipper
 
     def _send_command(self, cmd, arg):
-        self._rover_protocol.write_nowait(self._motor_left, self._motor_right, self._motor_flipper, cmd, arg)
+        self._rover_protocol.write_nowait(
+            self._motor_left, self._motor_right, self._motor_flipper, cmd, arg
+        )
 
     def send_speed(self):
         self._send_command(CommandVerb.NOP, 0)
@@ -78,7 +80,9 @@ class Rover:
         with trio.fail_after(1):
             k, data = await self._rover_protocol.read_one()
             if k != index:
-                raise OpenRoverException('Received unexpected data. Expected {}, received {}:{}'.format(index, k, data))
+                raise OpenRoverException(
+                    f"Received unexpected data. Expected {index}, received {k}:{data}"
+                )
 
         return data
 
@@ -93,7 +97,10 @@ class Rover:
                 k, data = await self._rover_protocol.read_one()
                 if k != index:
                     raise OpenRoverException(
-                        'Received unexpected data. Expected {}, received {}:{}'.format(index, k, data))
+                        "Received unexpected data. Expected {}, received {}:{}".format(
+                            index, k, data
+                        )
+                    )
             result[k] = data
 
         return result
@@ -110,4 +117,4 @@ async def get_openrover_version(port):
                     if k == 40:
                         return version
     except Exception as e:
-        raise OpenRoverException('Did not respond to request for OpenRover version') from e
+        raise OpenRoverException("Did not respond to request for OpenRover version") from e

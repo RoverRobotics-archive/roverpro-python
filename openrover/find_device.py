@@ -1,8 +1,8 @@
 from typing import Awaitable, Optional, Sequence
 
-from async_generator import async_generator, asynccontextmanager, yield_
-from serial.tools.list_ports import comports
 import trio
+from async_generator import asynccontextmanager
+from serial.tools.list_ports import comports
 
 from openrover.openrover_data import OpenRoverFirmwareVersion
 from openrover.serial_trio import SerialTrio
@@ -14,10 +14,12 @@ DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, stopbits=1)
 
 
 def get_ftdi_device_paths() -> Sequence[str]:
-    return [comport.device for comport in comports() if comport.manufacturer == 'FTDI']
+    return [comport.device for comport in comports() if comport.manufacturer == "FTDI"]
 
 
-async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRoverFirmwareVersion]:
+async def get_openrover_protocol_version(
+    device: SerialTrio,
+) -> Awaitable[OpenRoverFirmwareVersion]:
     try:
         with trio.fail_after(1):
             orp = OpenRoverProtocol(device)
@@ -27,13 +29,14 @@ async def get_openrover_protocol_version(device: SerialTrio) -> Awaitable[OpenRo
                 if k == 40:
                     return version
     except trio.TooSlowError as e:
-        raise OpenRoverException('Device did not respond to a request for version. Is it on?') from e
+        raise OpenRoverException(
+            "Device did not respond to a request for version. Is it on?"
+        ) from e
     except Exception as e:
-        raise OpenRoverException('Device did not return a valid openrover version', e) from e
+        raise OpenRoverException("Device did not return a valid openrover version", e) from e
 
 
 @asynccontextmanager
-@async_generator
 async def open_rover_device(*ports_to_try: Optional[str]):
     """
     Enumerates serial devices until it finds one that responds to a request for OpenRover version. Returns that device.
@@ -45,7 +48,7 @@ async def open_rover_device(*ports_to_try: Optional[str]):
         async with SerialTrio(port, **DEFAULT_SERIAL_KWARGS) as device:
             try:
                 await get_openrover_protocol_version(device)
-                await yield_(device)
+                yield device
                 return
             except OpenRoverException as e:
                 exc_args.append((port, e))
