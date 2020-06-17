@@ -19,7 +19,7 @@ async def open_rover(path_to_serial: Optional[str] = None):
             device_cxt = SerialTrio(path_to_serial)
 
         async with device_cxt as device:
-            rover = Rover(nursery)
+            rover = Rover()
             await rover.set_device(device)
             yield rover
 
@@ -29,16 +29,14 @@ class Rover:
     _motor_right = 0
     _motor_flipper = 0
 
-    _nursery = None
     _rover_protocol = None
     _device = None
 
-    def __init__(self, nursery):
+    def __init__(self):
         """An OpenRover object"""
         self._motor_left = 0
         self._motor_right = 0
         self._motor_flipper = 0
-        self._nursery = nursery
         self._openrover_data_to_memory_channel = {
             i: trio.open_memory_channel(0) for i in OPENROVER_DATA_ELEMENTS.keys()
         }

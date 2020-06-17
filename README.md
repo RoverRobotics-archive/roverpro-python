@@ -30,8 +30,6 @@ Manual Prerequisites:
 * Python3 (recommended to install Python3.6, Python3.7, and Python3.8)
 * [Poetry](https://python-poetry.org/docs/#installation) 
 
-Note this is a pyproject (PEP-517) project so it will NOT work to `pip install --editable ...`
-
 Instead, we recommend:
 
 ```
@@ -48,6 +46,12 @@ For testing, it is recommended to use `tox`, which can run tests on multiple Pyt
 `pytest` = test on current Python version
 `black` = tidy up files
 `githooks setup` = install git pre-commit hook to automatically run black.
+
+### Caveats
+
+* When running in PyCharm in debug mode, you will get a warning like "RuntimeWarning: You seem to already have a custom sys.excepthook handler installed ..." https://github.com/python-trio/trio/issues/1553
+* Note this is a pyproject (PEP-517) project so it will NOT work to `pip install --editable ...`
+
 
 ### pitstop
 
