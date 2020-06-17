@@ -1,3 +1,4 @@
+import errno
 import logging
 import warnings
 
@@ -25,23 +26,32 @@ class SerialTrio(trio.abc.AsyncResource):
     def __init__(self, port, **serial_kwargs):
         """Wrapper for pyserial that makes it work better with async"""
         self.port = port
-        self.serial_kwargs = dict(
-            write_timeout=0, inter_byte_timeout=None, timeout=0, **serial_kwargs
-        )
+        self.serial_kwargs = {
+            "write_timeout": 0,
+            "inter_byte_timeout": None,
+            "timeout": 0,
+            "exclusive": True,
+        }
+        self.serial_kwargs.update(serial_kwargs)
+
         try:
             self._serial = serial.Serial(self.port, **self.serial_kwargs)
         except serial.SerialException as e:
-            if "FileNotFoundError" in e.args[0]:
+            if e.errno == errno.EAGAIN:
+                raise OpenRoverException("Serial device is already open", self.port) from e
+            if e.errno == errno.ENOENT:
                 raise OpenRoverException(
                     "Could not connect to serial device - file not found. Is it connected?",
                     self.port,
                 ) from e
-            if "PermissionError" in e.args[0]:
+            if e.errno == errno.EACCES:
                 raise OpenRoverException(
-                    "Could not connect to serial device - permission error. Is it open in another process? Does this user have OS permission?",
+                    "Access error when trying to connect to serial device. Is it open in another process? Does this user have OS permission?",
                     self.port,
                 ) from e
-            raise
+            if e.errno == errno.EISDIR or e.errno == errno.ENOTTY:
+                raise OpenRoverException("Does not appear to be a serial device") from e
+            raise OpenRoverException("Could not connect to serial device.") from e
 
     @property
     def in_waiting(self):
