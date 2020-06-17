@@ -42,10 +42,16 @@ poetry install
 
 For testing, it is recommended to use `tox`, which can run tests on multiple Python interpreters.
 
-`tox` = test on *all* supported Python minor versions
-`pytest` = test on current Python version
-`black` = tidy up files
-`githooks setup` = install git pre-commit hook to automatically run black.
+<dl>
+    <dt><code>pytest</code></dt>
+    <dd>Test on current Python interpreter</dd>
+    <dt><code>tox</code></dt>
+    <dd>Test on all supported Python minor versions</dd>
+    <dt><code>black .</code></dt>
+    <dd>Reformat code to a uniform style</dd>
+    <dt><code>githooks setup</code></dt>
+    <dd>Install git pre-commit hook to automatically run <code>black</code></dd>
+</dl>
 
 ### Caveats
 
