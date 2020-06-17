@@ -23,6 +23,32 @@ On Linux, you may not have permission to access USB devices. If this is the case
 sudo usermod -a -G dialout $(whoami)
 ```
 
+### Development setup
+
+Manual Prerequisites:
+
+* Python3 (recommended to install Python3.6, Python3.7, and Python3.8)
+* [Poetry](https://python-poetry.org/docs/#installation) 
+
+Note this is a pyproject (PEP-517) project so it will NOT work to `pip install --editable ...`
+
+Instead, we recommend:
+
+```
+git clone https://github.com/RoverRobotics/openrover-python.git
+cd openrover-python
+poetry install
+```
+
+#### Useful commands
+
+For testing, it is recommended to use `tox`, which can run tests on multiple Python interpreters.
+
+`tox` = test on *all* supported Python minor versions
+`pytest` = test on current Python version
+`black` = tidy up files
+`githooks setup` = install git pre-commit hook to automatically run black.
+
 ### pitstop
 
 Pitstop is a new utility to bootload your rover and set options. After installing, you can invoke it with `pitstop` or `python3 -m openrover.pitstop`.
