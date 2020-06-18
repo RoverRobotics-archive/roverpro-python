@@ -58,23 +58,44 @@ async def test_missing_device():
             pass
 
 
-async def test_fan_speed_timeout(rover):
-    fan_speed_cmd = 0.5
+@pytest.mark.parametrize("fan_speed_cmd", [0.1, 0.4, 0.7])
+async def test_fan_speed(rover, fan_speed_cmd):
+    version = await rover.get_data(40)
 
     rover.set_fan_speed(fan_speed_cmd)
     assert await rover.get_data(48) == fan_speed_cmd
 
-    await trio.sleep(1)
-    assert await rover.get_data(48) == 0
+    if (version.major, version.minor) < (1, 10):
+        await trio.sleep(1)
+        # manual fan duty should revert to zero after  timeout
+        assert await rover.get_data(48) == 0
+    else:
+        speeds_a = []
+        speeds_b = []
 
+        # wait a moment for fan duty to catch up with commanded value
+        await trio.sleep(0.1)
 
-async def test_fan_speed(rover):
-    gradations = 50
-    for i in range(gradations + 1):
-        fan_speed_cmd = i / gradations
-        rover.set_fan_speed(fan_speed_cmd)
-        got_fan_speed = await rover.get_data(48)
-        assert got_fan_speed == pytest.approx(fan_speed_cmd, abs=0.1)
+        for i in range(int(fan_speed_cmd * 40)):
+            speeds_a.append(await rover.get_data(78))
+            speeds_b.append(await rover.get_data(80))
+            await trio.sleep(0.5)
+
+        # fan speeds should all be between 0 and 1
+        assert all(0 <= x <= 1 for x in speeds_a)
+        assert all(0 <= x <= 1 for x in speeds_b)
+
+        # fan duty should start at the commanded value
+        assert speeds_a[0] == pytest.approx(fan_speed_cmd, abs=0.05)
+        assert speeds_b[0] == pytest.approx(fan_speed_cmd, abs=0.05)
+
+        # fan duty should decrease
+        assert speeds_a == sorted(speeds_a, reverse=True)
+        assert speeds_b == sorted(speeds_b, reverse=True)
+
+        # fan duty should end near zero
+        assert speeds_a[-1] == pytest.approx(0, abs=0.05)
+        assert speeds_b[-1] == pytest.approx(0, abs=0.05)
 
 
 async def test_get_all_data_elements(rover):
