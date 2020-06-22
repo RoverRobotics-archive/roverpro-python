@@ -17,8 +17,10 @@ classifiers = [
   "Operating System :: OS Independent",
   "Framework :: Trio"
 ]
+license = "BSD-3-Clause"
 repository = "https://github.com/RoverRobotics/openrover_python_driver"
 authors = [
+  "Dan Rose <dan@digilabs.io>",
   "Rover Robotics <info@roverrobotics.com>",
 ]
 maintainers = [
