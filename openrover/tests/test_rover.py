@@ -9,6 +9,7 @@ from openrover.openrover_data import (
     MotorStatusFlag,
     OPENROVER_DATA_ELEMENTS,
     OpenRoverFirmwareVersion,
+    SystemFaultFlag,
 )
 from openrover.rover import open_rover, Rover
 from openrover.util import OpenRoverException, RoverDeviceNotFound
@@ -103,6 +104,59 @@ async def test_get_all_data_elements(rover):
         if not de.not_implemented:
             v = await rover.get_data(i)
             assert v is not None
+
+
+@pytest.mark.motor
+async def test_overspeed_fault(rover):
+    rover.clear_system_fault()
+    assert await rover.get_data(82) == SystemFaultFlag.NONE
+
+    enc_counts_left = []
+    enc_counts_right = []
+    enc_intervals_left = []
+    enc_intervals_right = []
+    rover.set_motor_speeds(1.0, 1.0, 0)
+    for _ in range(50):
+        rover.send_speed()
+        await trio.sleep(0.1)
+        data = await rover.get_data_items([14, 16, 28, 30])
+        enc_counts_left.append(data[14])
+        enc_counts_right.append(data[16])
+        enc_intervals_left.append(data[28])
+        enc_intervals_right.append(data[30])
+
+    # motors running at full speed
+    for x in enc_intervals_left[5:20]:
+        assert x < 100
+    for x in enc_intervals_right[5:20]:
+        assert x < 100
+
+    # motors should come to a stop
+    for x in enc_intervals_left[40:]:
+        assert x > 1000 or x == 0
+    for x in enc_intervals_right[40:]:
+        assert x > 1000 or x == 0
+
+    assert await rover.get_data(82) == SystemFaultFlag.OVERSPEED
+
+    enc_intervals_left2 = []
+    enc_intervals_right2 = []
+    rover.set_motor_speeds(0.2, 0.2, 0)
+    for _ in range(10):
+        rover.send_speed()
+        await trio.sleep(0.1)
+        assert rover.get_data(28)
+        data = await rover.get_data_items([28, 30])
+        enc_intervals_left2.append(data[28])
+        enc_intervals_right2.append(data[30])
+
+    # fault condition still active so motor speeds should be ignored
+    assert all(x == 0 or x > 1000 for x in enc_intervals_left2)
+    assert all(x == 0 or x > 1000 for x in enc_intervals_right2)
+    assert await rover.get_data(82) == SystemFaultFlag.OVERSPEED
+
+    rover.clear_system_fault()
+    assert await rover.get_data(82) == SystemFaultFlag.NONE
 
 
 @pytest.mark.parametrize("motor_effort", [0, -0.1, +0.1, -0.2, +0.2, 0])
