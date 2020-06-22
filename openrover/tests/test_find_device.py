@@ -42,6 +42,7 @@ async def test_open_rover_device_nested_fails():
             async with SerialTrio(d.port):
                 pass
 
+
 async def test_missing_device():
     with pytest.raises(OpenRoverException):
         async with SerialTrio("/dev/nosuchdevice") as d2:
