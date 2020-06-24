@@ -8,9 +8,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.6'
-      - run: python3 -m pip install poetry
-      - run: poetry install
-      - run: pitstop --help
+      - run: |
+        python3 -m pip install poetry
+        poetry install
+        poetry run pitstop --help
       - run: pyinstaller ./openrover/pitstop.py --onefile
       - uses: actions/upload-artifact@v2
         with:
