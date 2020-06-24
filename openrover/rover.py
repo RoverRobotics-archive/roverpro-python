@@ -12,16 +12,12 @@ from .util import OpenRoverException
 
 @asynccontextmanager
 async def open_rover(path_to_serial: Optional[str] = None):
-    async with trio.open_nursery() as nursery:
-        if path_to_serial is None:
-            device_cxt = open_rover_device()
-        else:
-            device_cxt = SerialTrio(path_to_serial)
+    args = [] if path_to_serial is None else [path_to_serial]
 
-        async with device_cxt as device:
-            rover = Rover()
-            await rover.set_device(device)
-            yield rover
+    async with open_rover_device(*args) as device:
+        rover = Rover()
+        await rover.set_device(device)
+        yield rover
 
 
 class Rover:
