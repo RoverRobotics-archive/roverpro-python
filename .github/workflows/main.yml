@@ -12,7 +12,7 @@ jobs:
         python3 -m pip install poetry
         poetry install
         poetry run pitstop --help
-      - run: pyinstaller ./openrover/pitstop.py --onefile
+      - run: poetry run pyinstaller ./openrover/pitstop.py --onefile
       - uses: actions/upload-artifact@v2
         with:
           name: pitstop-${{ runner.os }}
