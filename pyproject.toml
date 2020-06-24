@@ -28,6 +28,9 @@ maintainers = [
 ]
 readme = "README.md"
 
+[tool.poetry.scripts]
+pitstop = 'openrover.pitstop:main'
+
 [tool.poetry.dependencies]
 python = "^3.6"
 
