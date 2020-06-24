@@ -76,7 +76,7 @@ async def amain():
         ports = get_ftdi_device_paths()
         if len(ports) == 0:
             print("No devices found")
-            exit(1)
+            sys.exit(1)
         if len(ports) > 1:
             print(f"Multiple devices found: {', '.join(ports)}")
         port = ports[0]
@@ -86,7 +86,7 @@ async def amain():
         hexfile = Path(args.flash)
         if not hexfile.is_file():
             print(f"Could not bootload. Hex file {hexfile.absolute()} does not exist.")
-            exit(1)
+            sys.exit(1)
 
         async with SerialTrio(port, baudrate=BAUDRATE) as ser:
             orp = OpenRoverProtocol(ser)
@@ -130,12 +130,12 @@ async def amain():
 
         if actual_version is None:
             print("could not get version")
-            exit(1)
+            sys.exit(1)
         else:
             print(f"Actual version = {actual_version}")
         if LooseVersion(str(actual_version)) < expected_version:
             print("Failed!")
-            exit(1)
+            sys.exit(1)
 
     if args.updatesettings:
         async with SerialTrio(port, baudrate=57600) as device:
@@ -162,7 +162,7 @@ async def amain():
             ]
         )
     )
-    exit(0)
+    sys.exit(0)
 
 
 def main():
