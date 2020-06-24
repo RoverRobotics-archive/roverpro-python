@@ -2,7 +2,10 @@ name: CI
 on: push
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -11,9 +14,9 @@ jobs:
       - run: |
           python3 -m pip install poetry
           poetry install
-          poetry run pitstop --help
-      - run: poetry run pyinstaller ./openrover/pitstop.py --onefile
+          poetry build
+          poetry run pyinstaller ./openrover/pitstop.py --onefile
       - uses: actions/upload-artifact@v2
         with:
-          name: pitstop-${{ runner.os }}
+          name: ${{ runner.os }}
           path: dist/
