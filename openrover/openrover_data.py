@@ -1,4 +1,5 @@
 import abc
+import enum
 
 from .util import OpenRoverException
 
@@ -110,25 +111,17 @@ class DataFormatChargerState(ReadDataFormat, WriteDataFormat):
         return "0xDADA if charging, else 0x0000"
 
 
-import enum
-
-try:
-    from enum import Flag, auto
-except ImportError:
-    from aenum import Flag, auto
-
-
-class BatteryStatus(Flag):
-    overcharged_alarm = auto()
-    terminate_charge_alarm = auto()
-    over_temp_alarm = auto()
-    terminate_discharge_alarm = auto()
-    remaining_capacity_alarm = auto()
-    remaining_time_alarm = auto()
-    initialized = auto()
-    discharging = auto()
-    fully_charged = auto()
-    fully_discharged = auto()
+class BatteryStatus(enum.Flag):
+    overcharged_alarm = enum.auto()
+    terminate_charge_alarm = enum.auto()
+    over_temp_alarm = enum.auto()
+    terminate_discharge_alarm = enum.auto()
+    remaining_capacity_alarm = enum.auto()
+    remaining_time_alarm = enum.auto()
+    initialized = enum.auto()
+    discharging = enum.auto()
+    fully_charged = enum.auto()
+    fully_discharged = enum.auto()
 
 
 class DataFormatBatteryStatus(ReadDataFormat):
@@ -220,14 +213,14 @@ DRIVE_MODE_FORMAT = DataFormatDriveMode()
 BATTERY_STATUS_FORMAT = DataFormatBatteryStatus()
 
 
-class MotorStatusFlag(Flag):
+class MotorStatusFlag(enum.Flag):
     NONE = 0
-    FAULT1 = auto()
-    FAULT2 = auto()
-    DECAY_MODE = auto()
-    REVERSE = auto()
-    BRAKE = auto()
-    COAST = auto()
+    FAULT1 = enum.auto()
+    FAULT2 = enum.auto()
+    DECAY_MODE = enum.auto()
+    REVERSE = enum.auto()
+    BRAKE = enum.auto()
+    COAST = enum.auto()
 
 
 class DataFormatMotorStatus(ReadDataFormat):
@@ -267,10 +260,10 @@ class DataFormatIgnored(WriteDataFormat):
         self.n_bytes = n_bytes
 
 
-class SystemFaultFlag(Flag):
+class SystemFaultFlag(enum.Flag):
     NONE = 0
-    OVERSPEED = auto()
-    OVERCURRENT = auto()
+    OVERSPEED = enum.auto()
+    OVERCURRENT = enum.auto()
 
 
 class DataFormatSystemFault(ReadDataFormat):

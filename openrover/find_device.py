@@ -10,6 +10,7 @@ from openrover.util import RoverDeviceNotFound
 from .openrover_protocol import CommandVerb, OpenRoverProtocol
 from .util import OpenRoverException
 
+"""Communication settings for connecting to OpenRover hardware"""
 DEFAULT_SERIAL_KWARGS = dict(baudrate=57600, stopbits=1)
 
 
