@@ -206,6 +206,18 @@ python-versions = "*"
 version = "2.2.1"
 
 [[package]]
+category = "dev"
+description = "Mach-O header analysis and editing"
+marker = "sys_platform == \"darwin\""
+name = "macholib"
+optional = false
+python-versions = "*"
+version = "1.14"
+
+[package.dependencies]
+altgraph = ">=0.15"
+
+[[package]]
 category = "main"
 description = "More routines for operating on iterables, beyond itertools"
 name = "more-itertools"
@@ -507,7 +519,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "daac8f51cafe61db32f6b117cdb52895220520d3fb36b51957b19cdf3a43e155"
+content-hash = "78a61d94b081f96cfe6a3a178b8902fd7bedc56932df1cb0bc4d8119544e6587"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -620,6 +632,10 @@ importlib-resources = [
 intelhex = [
     {file = "intelhex-2.2.1-py2.py3-none-any.whl", hash = "sha256:714c4b3f68a113005f54bc86ba3b0f47df41626fedb60eded966310bbee611b2"},
     {file = "intelhex-2.2.1.tar.gz", hash = "sha256:009d8511e0d50639230c39af9607deee771cf026f67ef7507a8c3fd4fa927832"},
+]
+macholib = [
+    {file = "macholib-1.14-py2.py3-none-any.whl", hash = "sha256:c500f02867515e6c60a27875b408920d18332ddf96b4035ef03beddd782d4281"},
+    {file = "macholib-1.14.tar.gz", hash = "sha256:0c436bc847e7b1d9bda0560351bf76d7caf930fb585a828d13608839ef42c432"},
 ]
 more-itertools = [
     {file = "more-itertools-8.4.0.tar.gz", hash = "sha256:68c70cc7167bdf5c7c9d8f6954a7837089c6a36bf565383919bb595efb8a17e5"},
