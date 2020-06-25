@@ -17,6 +17,8 @@ jobs:
           poetry install
           poetry build
           poetry run pyinstaller ./openrover/pitstop.py --onefile
+      - if: runner.os != 'Windows'
+        run: chmod +x dist/pitstop
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}
