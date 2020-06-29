@@ -1,7 +1,8 @@
 import abc
 import enum
-
-from .util import OpenRoverException
+import functools
+import re
+from typing import NamedTuple, Optional
 
 
 class ReadDataFormat(abc.ABC):
@@ -48,35 +49,33 @@ class IntDataFormat(ReadDataFormat, WriteDataFormat):
 OPENROVER_LEGACY_VERSION = 40621
 
 
-class OpenRoverFirmwareVersion:
-    def __init__(self, value: int):
-        if value == 0:
-            raise OpenRoverException("invalid version number %s", value)
-        self.value = value
+@functools.total_ordering
+class OpenRoverFirmwareVersion(NamedTuple):
+    @classmethod
+    def parse(cls, a_str):
+        ver_re = re.compile(r"(\d+(?:[.]\d+){0,2})(?:-([^+])+)?(?:[+](.+))?", re.VERBOSE)
+        match = ver_re.fullmatch(a_str)
+        parts = [int(p) for p in match.group(0).split(".")]
+        return OpenRoverFirmwareVersion(*parts)
 
-    def __eq__(self, other):
-        return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
+    major: int
+    minor: int = 0
+    patch: int = 0
 
-    def __str__(self):
-        return f"{self.major}.{self.minor}.{self.patch}"
-
-    @property
-    def major(self):
-        if self.value == OPENROVER_LEGACY_VERSION:
-            return 0
-        return self.value // 10000
+    build: str = ""
+    prerelease: str = ""
 
     @property
-    def minor(self):
-        if self.value == OPENROVER_LEGACY_VERSION:
-            return 0
-        return self.value // 100 % 100
+    def value(self):
+        return self.major * 10000 + self.minor * 100 + self.patch * 10
 
-    @property
-    def patch(self):
-        if self.value == OPENROVER_LEGACY_VERSION:
-            return 0
-        return self.value % 10
+    def __lt__(self, other):
+        return (self.major, self.minor, self.patch, other.prerelease) < (
+            other.major,
+            other.minor,
+            other.patch,
+            self.prerelease,
+        )
 
 
 class DataFormatFirmwareVersion(ReadDataFormat):
@@ -84,7 +83,9 @@ class DataFormatFirmwareVersion(ReadDataFormat):
 
     def unpack(self, b):
         v = UINT16.unpack(b)
-        return OpenRoverFirmwareVersion(v)
+        if v == OPENROVER_LEGACY_VERSION:
+            return OpenRoverFirmwareVersion(1, 0, 0)
+        return OpenRoverFirmwareVersion(v // 10000, v // 100 % 100, v % 10)
 
     def description(self):
         return (
@@ -292,12 +293,35 @@ class DataElement:
         name: str,
         description: str = None,
         not_implemented: bool = False,
+        since: Optional[str] = None,
+        until: Optional[str] = None,
     ):
         self.index = index
         self.data_format = data_format
         self.name = name
         self.description = description
         self.not_implemented = not_implemented
+        self.since_version = None if since is None else OpenRoverFirmwareVersion.parse(since)
+        self.until_version = None if until is None else OpenRoverFirmwareVersion.parse(until)
+
+    def supported(self, version):
+        if isinstance(version, str):
+            v = OpenRoverFirmwareVersion.parse(version)
+        elif isinstance(version, OpenRoverFirmwareVersion):
+            v = version
+        else:
+            raise TypeError(
+                f"Expected string or OpenRoverFirmwareVersion, but got {type(version)}"
+            )
+
+        if self.not_implemented:
+            return False
+        if self.since_version is not None and v < self.since_version:
+            return False
+        if self.until_version is not None:
+            if self.until_version <= v:
+                return False
+        return True
 
 
 elements = [
@@ -325,14 +349,16 @@ elements = [
         UINT16,
         "left motor encoder count",
         "May overflow or underflow. Increments when motor driven forward, decrements backward",
+        since="1.4",
     ),
     DataElement(
         16,
         UINT16,
         "right motor encoder count",
         "May overflow or underflow. Increments when motor driven forward, decrements backward",
+        since="1.4",
     ),
-    DataElement(18, UINT16, "motors fault flag"),
+    DataElement(18, UINT16, "motors fault flag", not_implemented=True),
     DataElement(20, UINT16, "left motor temperature"),
     DataElement(22, UINT16, "right motor temperature", not_implemented=True),
     DataElement(24, OLD_VOLTAGE_FORMAT, "battery A voltage (external)"),
@@ -374,27 +400,35 @@ elements = [
     DataElement(44, SIGNED_MILLIS_FORMAT, "battery B current (external)"),
     DataElement(46, UINT16, "motor flipper angle"),
     DataElement(48, FAN_SPEED_RESPONSE_FORMAT, "fan speed"),
-    DataElement(50, DRIVE_MODE_FORMAT, "drive mode", not_implemented=True),
-    DataElement(52, BATTERY_STATUS_FORMAT, "battery A status"),
-    DataElement(54, BATTERY_STATUS_FORMAT, "battery B status"),
-    DataElement(56, UINT16, "battery A mode"),
-    DataElement(58, UINT16, "battery B mode"),
-    DataElement(60, DECIKELVIN_FORMAT, "battery A temperature (internal)"),
-    DataElement(62, DECIKELVIN_FORMAT, "battery B temperature (internal)"),
-    DataElement(64, UNSIGNED_MILLIS_FORMAT, "battery A voltage (internal)"),
-    DataElement(66, UNSIGNED_MILLIS_FORMAT, "battery B voltage (internal)"),
+    DataElement(50, DRIVE_MODE_FORMAT, "drive mode", until="1.7"),
+    DataElement(52, BATTERY_STATUS_FORMAT, "battery A status", since="1.2"),
+    DataElement(54, BATTERY_STATUS_FORMAT, "battery B status", since="1.2"),
+    DataElement(56, UINT16, "battery A mode", since="1.2"),
+    DataElement(58, UINT16, "battery B mode", since="1.2"),
+    DataElement(60, DECIKELVIN_FORMAT, "battery A temperature (internal)", since="1.2"),
+    DataElement(62, DECIKELVIN_FORMAT, "battery B temperature (internal)", since="1.2"),
+    DataElement(64, UNSIGNED_MILLIS_FORMAT, "battery A voltage (internal)", since="1.2"),
+    DataElement(66, UNSIGNED_MILLIS_FORMAT, "battery B voltage (internal)", since="1.2"),
     DataElement(
-        68, SIGNED_MILLIS_FORMAT, "battery A current (internal)", ">0 = charging; <0 = discharging"
+        68,
+        SIGNED_MILLIS_FORMAT,
+        "battery A current (internal)",
+        ">0 = charging; <0 = discharging",
+        since="1.2",
     ),
     DataElement(
-        70, SIGNED_MILLIS_FORMAT, "battery B current (internal)", ">0 = charging; <0 = discharging"
+        70,
+        SIGNED_MILLIS_FORMAT,
+        "battery B current (internal)",
+        ">0 = charging; <0 = discharging",
+        since="1.2",
     ),
-    DataElement(72, DataFormatMotorStatus(), "left motor status"),
-    DataElement(74, DataFormatMotorStatus(), "right motor status"),
-    DataElement(76, DataFormatMotorStatus(), "flipper motor status"),
-    DataElement(78, FAN_SPEED_RESPONSE_FORMAT, "fan 1 duty"),
-    DataElement(80, FAN_SPEED_RESPONSE_FORMAT, "fan 2 duty"),
-    DataElement(82, DataFormatSystemFault(), "system fault flags"),
+    DataElement(72, DataFormatMotorStatus(), "left motor status", since="1.7"),
+    DataElement(74, DataFormatMotorStatus(), "right motor status", since="1.7"),
+    DataElement(76, DataFormatMotorStatus(), "flipper motor status", since="1.7"),
+    DataElement(78, FAN_SPEED_RESPONSE_FORMAT, "fan 1 duty", since="1.9"),
+    DataElement(80, FAN_SPEED_RESPONSE_FORMAT, "fan 2 duty", since="1.9"),
+    DataElement(82, DataFormatSystemFault(), "system fault flags", since="1.10"),
 ]
 
 OPENROVER_DATA_ELEMENTS = {e.index: e for e in elements}

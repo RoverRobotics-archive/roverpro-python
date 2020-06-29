@@ -66,9 +66,9 @@ async def test_fan_speed(rover, fan_speed_cmd):
     rover.set_fan_speed(fan_speed_cmd)
     assert await rover.get_data(48) == fan_speed_cmd
 
-    if (version.major, version.minor) < (1, 10):
-        await trio.sleep(1)
-        # manual fan duty should revert to zero after  timeout
+    if version < OpenRoverFirmwareVersion(1, 10):
+        await trio.sleep(3)
+        # manual fan duty should revert to zero after timeout
         assert await rover.get_data(48) == 0
     else:
         speeds_a = []
@@ -100,14 +100,20 @@ async def test_fan_speed(rover, fan_speed_cmd):
 
 
 async def test_get_all_data_elements(rover):
+    version = await rover.get_data(40)
+
     for i, de in OPENROVER_DATA_ELEMENTS.items():
-        if not de.not_implemented:
+        if de.supported(version):
             v = await rover.get_data(i)
             assert v is not None
 
 
 @pytest.mark.motor
 async def test_overspeed_fault(rover):
+    v = await rover.get_data(40)
+    if not OPENROVER_DATA_ELEMENTS[82].supported(v):
+        pytest.skip("System Fault Flag not implemented in this version")
+
     rover.clear_system_fault()
     assert await rover.get_data(82) == SystemFaultFlag.NONE
 
@@ -162,6 +168,9 @@ async def test_overspeed_fault(rover):
 @pytest.mark.parametrize("motor_effort", [0, -0.1, +0.1, -0.2, +0.2, 0])
 @pytest.mark.motor
 async def test_encoder_intervals(rover, motor_effort):
+    version = await rover.get_data(40)
+    counts_supported = all(OPENROVER_DATA_ELEMENTS[i].supported(version) for i in (14, 16))
+
     enc_counts_left = []
     enc_counts_right = []
     enc_intervals_left = []
@@ -173,34 +182,42 @@ async def test_encoder_intervals(rover, motor_effort):
         rover.send_speed()
         await trio.sleep(0.1)
 
+    element_ids = [28, 30]
+    if counts_supported:
+        element_ids += [14, 16]
+
     for _ in range(10):
         rover.send_speed()
         await trio.sleep(0.1)
-        data = await rover.get_data_items([14, 16, 28, 30])
-        enc_counts_left.append(data[14])
-        enc_counts_right.append(data[16])
+
+        data = await rover.get_data_items(element_ids)
+        if counts_supported:
+            enc_counts_left.append(data[14])
+            enc_counts_right.append(data[16])
+
         enc_intervals_left.append(data[28])
         enc_intervals_right.append(data[30])
 
-    encoder_delta_left = [
-        fix_encoder_delta(a - b) for a, b in zip(enc_counts_left[1:], enc_counts_left)
-    ]
-    encoder_delta_right = [
-        fix_encoder_delta(a - b) for a, b in zip(enc_counts_right[1:], enc_counts_right)
-    ]
-
     if motor_effort == 0:
-        assert all(i == 0 for i in encoder_delta_left)
-        assert all(i == 0 for i in encoder_delta_right)
-
         assert all(i == 0 or i > 500 for i in enc_intervals_left)
         assert all(i == 0 or i > 500 for i in enc_intervals_right)
     else:
-        assert all(20 < i / motor_effort < 500 for i in encoder_delta_left)
-        assert all(20 < i / motor_effort < 500 for i in encoder_delta_right)
-
         assert 0.005 < (1 / statistics.mean(enc_intervals_left)) / abs(motor_effort) < 0.05
         assert 0.005 < (1 / statistics.mean(enc_intervals_right)) / abs(motor_effort) < 0.05
+
+    if counts_supported:
+        encoder_delta_left = [
+            fix_encoder_delta(a - b) for a, b in zip(enc_counts_left[1:], enc_counts_left)
+        ]
+        encoder_delta_right = [
+            fix_encoder_delta(a - b) for a, b in zip(enc_counts_right[1:], enc_counts_right)
+        ]
+        if motor_effort == 0:
+            assert all(i == 0 for i in encoder_delta_left)
+            assert all(i == 0 for i in encoder_delta_right)
+        else:
+            assert all(20 < i / motor_effort < 500 for i in encoder_delta_left)
+            assert all(20 < i / motor_effort < 500 for i in encoder_delta_right)
 
 
 async def test_currents(rover):
@@ -274,6 +291,10 @@ async def test_temperatures(rover):
 
 
 async def test_motor_status_braked(rover):
+    v = await rover.get_data(40)
+    if not all(OPENROVER_DATA_ELEMENTS[i].supported(v) for i in (72, 74, 76)):
+        pytest.skip("Motor status flags not implemented in this version")
+
     rover.set_motor_speeds(0, 0, 0)
     statuses = (await rover.get_data(72), await rover.get_data(74), await rover.get_data(76))
     for s in statuses:
@@ -284,6 +305,9 @@ async def test_motor_status_braked(rover):
 @pytest.mark.motor
 @pytest.mark.parametrize("forward", [True, False], ids=["forward", "reverse"])
 async def test_motor_status_moving(rover, forward):
+    v = await rover.get_data(40)
+    if not all(OPENROVER_DATA_ELEMENTS[i].supported(v) for i in (72, 74, 76)):
+        pytest.skip("Motor status flags not implemented in this version")
     speed = 0.2
     if forward:
         rover.set_motor_speeds(+speed, -speed, +speed)
