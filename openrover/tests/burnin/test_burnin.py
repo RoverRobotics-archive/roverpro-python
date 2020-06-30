@@ -12,7 +12,7 @@ logger = logging.getLogger(__file__)
 async def control_robot(rover, left, right, flipper, duration):
     rover.set_motor_speeds(left, right, flipper)
     logger.info(
-        f"->processing-> left motor: {left} right motor: {right} flipper: {flipper} duration {duration} seconds"
+        f"Sending command left motor: {left} right motor: {right} flipper: {flipper} duration {duration} seconds..."
     )
     t1 = monotonic()
     while True:
