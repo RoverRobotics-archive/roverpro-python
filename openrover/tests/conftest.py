@@ -3,6 +3,7 @@ import pytest_trio.plugin
 
 BOOTLOAD_OPT = "--bootloadok"
 MOTOR_OPT = "--motorok"
+BURNIN_OPT = "--burninok"
 
 
 def pytest_addoption(parser):
@@ -20,11 +21,19 @@ def pytest_addoption(parser):
         "The wheels should be able to spin freely during this test, "
         "so the rover should be untethered or raised on a jackstand.",
     )
+    parser.addoption(
+        BURNIN_OPT,
+        action="store_true",
+        default=False,
+        help="enable burn-in tests. "
+        "These tests take a looong time and the rover should be raised on a jackstand.",
+    )
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "motor: this test uses the rover motors")
     config.addinivalue_line("markers", "bootload: this test may reprogram the rover")
+    config.addinivalue_line("markers", "burnin: run the long burn-in test")
 
 
 def pytest_fixture_setup(fixturedef, request):
@@ -45,3 +54,9 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "bootload" in item.keywords:
                 item.add_marker(skip_bootload)
+
+    if not config.getoption(BURNIN_OPT):
+        skip_burnin = pytest.mark.skip(reason=f"Need {BURNIN_OPT} option to run")
+        for item in items:
+            if "burnin" in item.keywords:
+                item.add_marker(skip_burnin)
