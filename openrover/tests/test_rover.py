@@ -65,11 +65,12 @@ async def test_fan_speed(rover, fan_speed_cmd):
 
     rover.set_fan_speed(fan_speed_cmd)
     assert await rover.get_data(48) == fan_speed_cmd
-
-    if version < OpenRoverFirmwareVersion(1, 10):
+    if version < OpenRoverFirmwareVersion(1, 9):
         await trio.sleep(3)
         # manual fan duty should revert to zero after timeout
         assert await rover.get_data(48) == 0
+    elif version < OpenRoverFirmwareVersion(1, 10):
+        pytest.skip("Fan speed control not implemented.")
     else:
         speeds_a = []
         speeds_b = []
