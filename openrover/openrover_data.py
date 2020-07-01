@@ -77,6 +77,13 @@ class OpenRoverFirmwareVersion(NamedTuple):
             self.prerelease,
         )
 
+    def __str__(self):
+        return (
+            f"{self.major}.{self.minor}.{self.patch}"
+            + (("-" + self.prerelease) if self.prerelease else "")
+            + (("+" + self.build) if self.build else "")
+        )
+
 
 class DataFormatFirmwareVersion(ReadDataFormat):
     python_type = OpenRoverFirmwareVersion

@@ -1,13 +1,13 @@
 import argparse
 import subprocess
 import sys
-from distutils.version import LooseVersion
 from pathlib import Path
 
 import trio
 
 from openrover import OpenRoverProtocol
 from openrover.find_device import get_ftdi_device_paths
+from openrover.openrover_data import OpenRoverFirmwareVersion
 from openrover.openrover_protocol import CommandVerb
 from openrover.serial_trio import SerialTrio
 
@@ -49,7 +49,7 @@ async def amain():
     parser.add_argument(
         "-m",
         "--minimumversion",
-        type=LooseVersion,
+        type=OpenRoverFirmwareVersion.parse,
         metavar="version",
         help="Check that the rover reports at least the given version\n"
         "version may be in the form N.N.N, N.N, or N",
@@ -133,7 +133,7 @@ async def amain():
             sys.exit(1)
         else:
             print(f"Actual version = {actual_version}")
-        if LooseVersion(str(actual_version)) < expected_version:
+        if actual_version < expected_version:
             print("Failed!")
             sys.exit(1)
 
