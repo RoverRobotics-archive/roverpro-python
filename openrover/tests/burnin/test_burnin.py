@@ -52,6 +52,9 @@ async def test_burnin():
         logger.info("burn test procedure starting!")
 
         await trio.sleep(1)
+        version = await rover.get_data(40)
+        logger.info(f"rover firmware version {version}")
+
         # for testing, we could set x =0.02 or something less than 1 to speed up the process
         # x=0.02
         # for actual use of burn test script, the scale factor x should be set to 1
