@@ -1,5 +1,4 @@
 import statistics
-from math import isclose
 
 import pytest
 import trio
@@ -221,74 +220,90 @@ async def test_encoder_intervals(rover, motor_effort):
             assert all(20 < i / motor_effort < 500 for i in encoder_delta_right)
 
 
-async def test_currents(rover):
-    await trio.sleep(3)
+@pytest.mark.parametrize(
+    "duty",
+    [0.0, pytest.param(0.2, marks=pytest.mark.motor), pytest.param(0.5, marks=pytest.mark.motor)],
+)
+async def test_power_currents(rover, duty):
+    await trio.sleep(1)
+    rover.set_motor_speeds(duty, duty, 0)
+    for i in range(10):
+        rover.send_speed()
+        await trio.sleep(0.1)
+    battery_current_total = await rover.get_data(0)
     battery_current_a = await rover.get_data(42)
     battery_current_b = await rover.get_data(44)
     battery_current_a_i2c = await rover.get_data(68)
     battery_current_b_i2c = await rover.get_data(70)
 
-    # must agree within 5% or 200mA
-    assert isclose(battery_current_a, abs(battery_current_a_i2c), rel_tol=0.05, abs_tol=0.2)
-    assert isclose(battery_current_b, abs(battery_current_b_i2c), rel_tol=0.05, abs_tol=0.2)
-
-    battery_current_total = await rover.get_data(0)
-    assert isclose(
-        battery_current_a + battery_current_b, battery_current_total, rel_tol=0.05, abs_tol=0.2
-    )
+    assert battery_current_a + battery_current_b == pytest.approx(battery_current_total, abs=0.2)
+    assert battery_current_a == pytest.approx(abs(battery_current_a_i2c), abs=0.2)
+    assert battery_current_b == pytest.approx(abs(battery_current_b_i2c), abs=0.2)
 
 
-async def test_soc(rover):
+async def test_power_equal_soc(rover):
     battery_soc_a = await rover.get_data(34)
     battery_soc_b = await rover.get_data(36)
-    assert 0 <= battery_soc_a <= 1
-    assert 0 <= battery_soc_b <= 1
-    assert isclose(battery_soc_a, battery_soc_b, rel_tol=0.1, abs_tol=0.1)
+    assert battery_soc_a == pytest.approx(battery_soc_b, abs=0.08)
 
 
-async def test_currents_charging(rover):
-    is_charging = await rover.get_data(38)
-    assert is_charging in [True, False]
-
+async def test_power_equal_current(rover):
     battery_current_a_i2c = await rover.get_data(68)
     battery_current_b_i2c = await rover.get_data(70)
+    assert battery_current_a_i2c == pytest.approx(battery_current_b_i2c, abs=0.08)
+
+
+async def test_power_equal_voltage(rover):
+    battery_voltage_a_i2c = await rover.get_data(64)
+    battery_voltage_b_i2c = await rover.get_data(66)
+    assert battery_voltage_a_i2c == pytest.approx(battery_voltage_b_i2c, abs=0.08)
+
+
+@pytest.mark.parametrize("battery", ["A", "B"])
+async def test_power_soc(rover, battery):
+    soc = await rover.get_data({"A": 34, "B": 36}[battery])
+    assert 0 <= soc <= 1
+
+
+@pytest.mark.parametrize("battery", ["A", "B"])
+async def test_power_currents_charging(rover, battery):
+    is_charging = await rover.get_data(38)
+    assert is_charging in [True, False]
+    battery_current_i2c = await rover.get_data({"A": 68, "B": 70}[battery])
     if is_charging:
         # charging battery has positive current
-        assert battery_current_a_i2c >= 0
-        assert battery_current_b_i2c >= 0
+        assert battery_current_i2c >= 0
     else:
         # discharging battery should have negative current
-        assert battery_current_a_i2c <= 0
-        assert battery_current_b_i2c <= 0
+        assert battery_current_i2c <= 0
 
 
-async def test_voltages(rover):
-    battery_voltage_a = await rover.get_data(24)
-    battery_voltage_a_i2c = await rover.get_data(64)
-    assert 12 < battery_voltage_a_i2c < 16.5
-    assert 12 < battery_voltage_a < 16.5
-    # must agree within 5% or 50mV
-    assert isclose(battery_voltage_a_i2c, battery_voltage_a, rel_tol=0.05, abs_tol=0.05)
+@pytest.mark.parametrize("battery", ["A", "B"])
+async def test_power_analog_i2c_voltages(rover, battery):
+    battery_voltage_analog = await rover.get_data({"A": 24, "B": 26}[battery])
+    battery_voltage_i2c = await rover.get_data({"A": 64, "B": 66}[battery])
+    assert 12 < battery_voltage_i2c < 16.5
+    assert 12 < battery_voltage_analog < 16.5
 
-    battery_voltage_b = await rover.get_data(26)
-    battery_voltage_b_i2c = await rover.get_data(66)
-    assert 12 < battery_voltage_b_i2c < 16.5
-    assert 12 < battery_voltage_b < 16.5
-    # must agree within 5% or 50mV
-    assert isclose(battery_voltage_b_i2c, battery_voltage_b, rel_tol=0.05, abs_tol=0.05)
+    assert battery_voltage_i2c == pytest.approx(battery_voltage_analog, abs=0.1)
 
 
-async def test_temperatures(rover):
+async def test_fan_temperatures_equal(rover):
     fan_temp = await rover.get_data(20)
-    assert 10 < fan_temp < 55
+    fan_temp2 = await rover.get_data(22)
+    assert 10 < fan_temp < 80
+    assert 10 < fan_temp2 < 80
+    assert fan_temp == pytest.approx(fan_temp2, abs=5)
 
+
+async def test_battery_temperatures_equal(rover):
     battery_temp_a = await rover.get_data(60)
     battery_temp_b = await rover.get_data(62)
 
     # Rated operating temperature check batteries are between 10 and 55 degrees C
     assert 10 < battery_temp_a < 55
     assert 10 < battery_temp_b < 55
-    assert abs(battery_temp_a - battery_temp_b) < 5
+    assert battery_temp_a == pytest.approx(battery_temp_b, abs=5)
 
 
 async def test_motor_status_braked(rover):
