@@ -90,7 +90,7 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
     print("running bootloader: " + list2cmdline(args))
 
     with trio.fail_after(60 * 15):
-        async with trio.Process(
+        async with await trio.open_process(
             args, stdin=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         ) as booty:
             async with trio.open_nursery() as nursery:
