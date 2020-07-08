@@ -8,8 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- New tests for overspeed fault behavior
-- New tests for fan speed behavior
+- New tests for overspeed fault behavior, fan speed behavior, data correctness, battery health, agreement of battery metrics (internal and external)
 - Testing with Tox to ensure compatibility with all supported Python versions
 - Support for new firmware verbs:
   - CLEAR_SYSTEM_FAULT (232)
@@ -25,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Serial error handling could previously throw a TypeError on failure to connect to a device instead of an OpenRoverException
 - No more warning when running on Ubuntu: "RuntimeWarning: You seem to already have a custom sys.excepthook handler installed."
+- Previously, Python API would incorrectly convert analog battery current.
 
 ### Changed
 
