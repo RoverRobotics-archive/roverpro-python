@@ -241,28 +241,64 @@ async def test_power_currents(rover, duty):
     assert battery_current_b == pytest.approx(abs(battery_current_b_i2c), abs=0.2)
 
 
-async def test_power_equal_soc(rover):
-    battery_soc_a = await rover.get_data(34)
-    battery_soc_b = await rover.get_data(36)
-    assert battery_soc_a == pytest.approx(battery_soc_b, abs=0.08)
+@pytest.mark.parametrize(
+    ("elt_a", "elt_b", "delta"),
+    (
+        pytest.param(52, 54, None, id="battery status"),
+        pytest.param(34, 36, 0.03, id="state of charge"),
+        pytest.param(60, 62, 3, id="temperature"),
+        pytest.param(24, 26, 0.01, id="voltage (external)", marks=pytest.mark.skip),
+        pytest.param(64, 66, 0.01, id="voltage (internal)"),
+        pytest.param(42, 44, 0.05, id="current (external)", marks=pytest.mark.skip),
+        pytest.param(68, 70, 0.05, id="current (internal)"),
+    ),
+)
+async def test_batteries_similar(rover, elt_a, elt_b, delta):
+    value_a = await rover.get_data(elt_a)
+    value_b = await rover.get_data(elt_b)
+    if delta is None:
+        assert value_a == value_b
+    else:
+        assert value_a == pytest.approx(value_b, abs=delta)
 
 
-async def test_power_equal_current(rover):
-    battery_current_a_i2c = await rover.get_data(68)
-    battery_current_b_i2c = await rover.get_data(70)
-    assert battery_current_a_i2c == pytest.approx(battery_current_b_i2c, abs=0.08)
+SANE_RANGE = {
+    0: (0, 2),
+    6: (0, 1023),
+    8: (0, 1023),
+    10: (0, 1),
+    12: (0, 1),
+    14: (0, 2 ** 16 - 1),
+    16: (0, 2 ** 16 - 1),
+    20: (10, 70),
+    22: (10, 70),
+    24: (12, 16.5),
+    26: (12, 16.5),
+    28: (0, 2 ** 16 - 1),
+    30: (0, 2 ** 16 - 1),
+    34: (0, 1),
+    36: (0, 1),
+    42: (0, 1),
+    44: (0, 1),
+    60: (10, 55),
+    62: (10, 55),
+    64: (12, 16.5),
+    66: (12, 16.5),
+    68: (-16.5, +16.5),
+    70: (-16.5, +16.5),
+}
 
 
-async def test_power_equal_voltage(rover):
-    battery_voltage_a_i2c = await rover.get_data(64)
-    battery_voltage_b_i2c = await rover.get_data(66)
-    assert battery_voltage_a_i2c == pytest.approx(battery_voltage_b_i2c, abs=0.08)
-
-
-@pytest.mark.parametrize("battery", ["A", "B"])
-async def test_power_soc(rover, battery):
-    soc = await rover.get_data({"A": 34, "B": 36}[battery])
-    assert 0 <= soc <= 1
+@pytest.mark.parametrize(
+    ["elt"], [(k,) for k in SANE_RANGE.keys()], ids=lambda elt: OPENROVER_DATA_ELEMENTS[elt].name
+)
+async def test_sane_value(rover, elt):
+    v = await rover.get_data(40)
+    if not OPENROVER_DATA_ELEMENTS[elt].supported(v):
+        pytest.skip(f"Data element {elt} not implemented in firmware {v}")
+    lo, hi = SANE_RANGE[elt]
+    value = await rover.get_data(elt)
+    assert lo <= value <= hi
 
 
 @pytest.mark.parametrize("battery", ["A", "B"])
@@ -278,69 +314,68 @@ async def test_power_currents_charging(rover, battery):
         assert battery_current_i2c <= 0
 
 
-@pytest.mark.parametrize("battery", ["A", "B"])
-async def test_power_analog_i2c_voltages(rover, battery):
-    battery_voltage_analog = await rover.get_data({"A": 24, "B": 26}[battery])
-    battery_voltage_i2c = await rover.get_data({"A": 64, "B": 66}[battery])
-    assert 12 < battery_voltage_i2c < 16.5
-    assert 12 < battery_voltage_analog < 16.5
+@pytest.mark.xfail(reason="suspected hardware problems with analog measurements")
+@pytest.mark.parametrize(
+    ("elt_analog", "elt_i2c"), (pytest.param(24, 64, id="A"), pytest.param(26, 66, id="B")),
+)
+async def test_power_analog_i2c_voltages_agree(rover, elt_analog, elt_i2c):
+    value_analog = await rover.get_data(elt_analog)
+    value_i2c = await rover.get_data(elt_i2c)
+    assert value_analog == pytest.approx(value_i2c, abs=0.05)
 
-    assert battery_voltage_i2c == pytest.approx(battery_voltage_analog, abs=0.1)
+
+@pytest.mark.xfail(reason="suspected hardware problems with analog measurements")
+@pytest.mark.parametrize(
+    ("elt_analog", "elt_i2c"), (pytest.param(42, 68, id="A"), pytest.param(44, 70, id="B")),
+)
+async def test_power_analog_i2c_currents_agree(rover, elt_analog, elt_i2c):
+    value_analog = await rover.get_data(elt_analog)
+    value_i2c = await rover.get_data(elt_i2c)
+    assert value_analog == pytest.approx(abs(value_i2c), abs=0.02)
 
 
 async def test_fan_temperatures_equal(rover):
     fan_temp = await rover.get_data(20)
     fan_temp2 = await rover.get_data(22)
-    assert 10 < fan_temp < 80
-    assert 10 < fan_temp2 < 80
     assert fan_temp == pytest.approx(fan_temp2, abs=5)
 
 
-async def test_battery_temperatures_equal(rover):
-    battery_temp_a = await rover.get_data(60)
-    battery_temp_b = await rover.get_data(62)
-
-    # Rated operating temperature check batteries are between 10 and 55 degrees C
-    assert 10 < battery_temp_a < 55
-    assert 10 < battery_temp_b < 55
-    assert battery_temp_a == pytest.approx(battery_temp_b, abs=5)
-
-
-async def test_motor_status_braked(rover):
+@pytest.mark.parametrize(
+    "right",
+    [
+        pytest.param(0, id="brake"),
+        pytest.param(-1, marks=pytest.mark.motor, id="reverse"),
+        pytest.param(+1, marks=pytest.mark.motor, id="forward"),
+    ],
+)
+@pytest.mark.parametrize(
+    "left",
+    [
+        pytest.param(0, id="brake"),
+        pytest.param(-1, marks=pytest.mark.motor, id="reverse"),
+        pytest.param(+1, marks=pytest.mark.motor, id="forward"),
+    ],
+)
+async def test_motor_status(rover, left, right):
     v = await rover.get_data(40)
-    if not all(OPENROVER_DATA_ELEMENTS[i].supported(v) for i in (72, 74, 76)):
+    if not all(OPENROVER_DATA_ELEMENTS[i].supported(v) for i in (72, 74)):
         pytest.skip("Motor status flags not implemented in this version")
-
-    rover.set_motor_speeds(0, 0, 0)
-    statuses = (await rover.get_data(72), await rover.get_data(74), await rover.get_data(76))
-    for s in statuses:
-        assert isinstance(s, MotorStatusFlag)
-        assert MotorStatusFlag.BRAKE in s
-
-
-@pytest.mark.motor
-@pytest.mark.parametrize("forward", [True, False], ids=["forward", "reverse"])
-async def test_motor_status_moving(rover, forward):
-    v = await rover.get_data(40)
-    if not all(OPENROVER_DATA_ELEMENTS[i].supported(v) for i in (72, 74, 76)):
-        pytest.skip("Motor status flags not implemented in this version")
-    speed = 0.2
-    if forward:
-        rover.set_motor_speeds(+speed, -speed, +speed)
-    else:
-        rover.set_motor_speeds(-speed, +speed, -speed)
-
-    for i in range(10):
+    rover.set_motor_speeds(left * 0.2, right * 0.2, 0)
+    for i in range(3):
         rover.send_speed()
-        await trio.sleep(0.15)
+        await trio.sleep(0.1)
 
-    statuses = (await rover.get_data(72), await rover.get_data(74), await rover.get_data(76))
+    l_status, r_status = (await rover.get_data(72), await rover.get_data(74))
 
-    for s in statuses:
-        assert isinstance(s, MotorStatusFlag)
-        if forward:
-            assert MotorStatusFlag.REVERSE not in s
-        else:
-            assert MotorStatusFlag.REVERSE in s
+    assert (left == 0) == (MotorStatusFlag.BRAKE in l_status)
+    assert (right == 0) == (MotorStatusFlag.BRAKE in r_status)
 
-        assert MotorStatusFlag.BRAKE not in s
+    if left < 0:
+        assert MotorStatusFlag.REVERSE in l_status
+    if left > 0:
+        assert MotorStatusFlag.REVERSE not in l_status
+
+    if right > 0:
+        assert MotorStatusFlag.REVERSE in r_status
+    if right < 0:
+        assert MotorStatusFlag.REVERSE not in r_status
