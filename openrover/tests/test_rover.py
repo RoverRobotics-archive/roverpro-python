@@ -1,3 +1,4 @@
+import enum
 import statistics
 
 import pytest
@@ -221,27 +222,6 @@ async def test_encoder_intervals(rover, motor_effort):
 
 
 @pytest.mark.parametrize(
-    "duty",
-    [0.0, pytest.param(0.2, marks=pytest.mark.motor), pytest.param(0.5, marks=pytest.mark.motor)],
-)
-async def test_power_currents(rover, duty):
-    await trio.sleep(1)
-    rover.set_motor_speeds(duty, duty, 0)
-    for i in range(10):
-        rover.send_speed()
-        await trio.sleep(0.1)
-    battery_current_total = await rover.get_data(0)
-    battery_current_a = await rover.get_data(42)
-    battery_current_b = await rover.get_data(44)
-    battery_current_a_i2c = await rover.get_data(68)
-    battery_current_b_i2c = await rover.get_data(70)
-
-    assert battery_current_a + battery_current_b == pytest.approx(battery_current_total, abs=0.2)
-    assert battery_current_a == pytest.approx(abs(battery_current_a_i2c), abs=0.2)
-    assert battery_current_b == pytest.approx(abs(battery_current_b_i2c), abs=0.2)
-
-
-@pytest.mark.parametrize(
     ("elt_a", "elt_b", "delta"),
     (
         pytest.param(52, 54, None, id="battery status"),
@@ -340,22 +320,14 @@ async def test_fan_temperatures_equal(rover):
     assert fan_temp == pytest.approx(fan_temp2, abs=5)
 
 
-@pytest.mark.parametrize(
-    "right",
-    [
-        pytest.param(0, id="brake"),
-        pytest.param(-1, marks=pytest.mark.motor, id="reverse"),
-        pytest.param(+1, marks=pytest.mark.motor, id="forward"),
-    ],
-)
-@pytest.mark.parametrize(
-    "left",
-    [
-        pytest.param(0, id="brake"),
-        pytest.param(-1, marks=pytest.mark.motor, id="reverse"),
-        pytest.param(+1, marks=pytest.mark.motor, id="forward"),
-    ],
-)
+class MotorDirection(enum.IntEnum):
+    FORWARD = +1
+    REVERSE = -1
+    STILL = 0
+
+
+@pytest.mark.parametrize("right", MotorDirection, ids=lambda x: x.name)
+@pytest.mark.parametrize("left", MotorDirection, ids=lambda x: x.name)
 async def test_motor_status(rover, left, right):
     v = await rover.get_data(40)
     if not all(OPENROVER_DATA_ELEMENTS[i].supported(v) for i in (72, 74)):

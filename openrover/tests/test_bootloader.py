@@ -43,8 +43,6 @@ def booty_exe():
 
 async def test_reboot(device):
     orp = OpenRoverProtocol(device)
-    # set a long timeout in case rover is already in bootloader
-
     try:
         orp.write_nowait(0, 0, 0, CommandVerb.RESTART, 0)
 
@@ -62,7 +60,7 @@ async def test_reboot(device):
                     k, v = await orp.read_one()
                     if k == 40:
                         return
-    except:
+    except BaseException:
         await trio.sleep(30)
         raise
 

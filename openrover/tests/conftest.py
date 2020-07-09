@@ -11,7 +11,7 @@ def pytest_addoption(parser):
         BOOTLOAD_OPT,
         action="store_true",
         default=False,
-        help="enable tests that may erase the rover's firmware",
+        help="enable tests that may erase the rover's firmware. Even if all tests run to completion and succeed, you will need to reinstall the rover's firmware afterwards.",
     )
     parser.addoption(
         MOTOR_OPT,
