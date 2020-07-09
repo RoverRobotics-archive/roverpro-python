@@ -69,7 +69,7 @@ async def test_fan_speed(rover, fan_speed_cmd):
         # manual fan duty should revert to zero after timeout
         assert await rover.get_data(48) == 0
     elif version < OpenRoverFirmwareVersion(1, 10):
-        pytest.skip("Fan speed control not implemented.")
+        pytest.xfail("Fan speed control not implemented.")
     else:
         speeds_a = []
         speeds_b = []
@@ -112,7 +112,7 @@ async def test_get_all_data_elements(rover):
 async def test_overspeed_fault(rover):
     v = await rover.get_data(40)
     if not OPENROVER_DATA_ELEMENTS[82].supported(v):
-        pytest.skip("System Fault Flag not implemented in this version")
+        pytest.xfail("System Fault Flag not implemented in this version")
 
     rover.clear_system_fault()
     assert await rover.get_data(82) == SystemFaultFlag.NONE
@@ -247,9 +247,9 @@ async def test_power_currents(rover, duty):
         pytest.param(52, 54, None, id="battery status"),
         pytest.param(34, 36, 0.03, id="state of charge"),
         pytest.param(60, 62, 3, id="temperature"),
-        pytest.param(24, 26, 0.01, id="voltage (external)", marks=pytest.mark.skip),
+        pytest.param(24, 26, 0.01, id="voltage (external)", marks=pytest.mark.xfail),
         pytest.param(64, 66, 0.01, id="voltage (internal)"),
-        pytest.param(42, 44, 0.05, id="current (external)", marks=pytest.mark.skip),
+        pytest.param(42, 44, 0.05, id="current (external)", marks=pytest.mark.xfail),
         pytest.param(68, 70, 0.05, id="current (internal)"),
     ),
 )
@@ -295,7 +295,7 @@ SANE_RANGE = {
 async def test_sane_value(rover, elt):
     v = await rover.get_data(40)
     if not OPENROVER_DATA_ELEMENTS[elt].supported(v):
-        pytest.skip(f"Data element {elt} not implemented in firmware {v}")
+        pytest.xfail(f"Data element {elt} not implemented in firmware {v}")
     lo, hi = SANE_RANGE[elt]
     value = await rover.get_data(elt)
     assert lo <= value <= hi
@@ -359,7 +359,7 @@ async def test_fan_temperatures_equal(rover):
 async def test_motor_status(rover, left, right):
     v = await rover.get_data(40)
     if not all(OPENROVER_DATA_ELEMENTS[i].supported(v) for i in (72, 74)):
-        pytest.skip("Motor status flags not implemented in this version")
+        pytest.xfail("Motor status flags not implemented in this version")
     rover.set_motor_speeds(left * 0.2, right * 0.2, 0)
     for i in range(3):
         rover.send_speed()
