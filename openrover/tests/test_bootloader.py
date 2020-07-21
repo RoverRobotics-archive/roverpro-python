@@ -34,7 +34,8 @@ def booty_exe():
     maybe_booty = shutil.which("booty")
     if maybe_booty is None:
         pytest.skip(
-            "Could not test bootloader. Booty executable does not exist or is not in the executable path."
+            "Could not test bootloader. Booty executable does not exist or is not in the"
+            " executable path."
         )
     p = Path(maybe_booty)
     assert p.is_file()

@@ -46,7 +46,8 @@ class SerialTrio(trio.abc.AsyncResource):
                 ) from e
             if e.errno == errno.EACCES:
                 raise OpenRoverException(
-                    "Access error when trying to connect to serial device. Is it open in another process? Does this user have OS permission?",
+                    "Access error when trying to connect to serial device. Is it open in another"
+                    " process? Does this user have OS permission?",
                     self.port,
                 ) from e
             if e.errno == errno.EISDIR or e.errno == errno.ENOTTY:

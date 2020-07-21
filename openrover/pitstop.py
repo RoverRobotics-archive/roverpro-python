@@ -54,7 +54,10 @@ async def amain():
     test = pitstop_action.add_parser(
         "test",
         help="Run tests on the rover",
-        description="Run tests on the rover. Some tests are inherently unsafe and are disabled by default, but may be enabled with below flags",
+        description=(
+            "Run tests on the rover. Some tests are inherently unsafe and are disabled by default,"
+            " but may be enabled with below flags"
+        ),
     )
     test.add_argument(
         "--bootloadok",
@@ -65,17 +68,17 @@ async def amain():
         "--motorok",
         action="store_true",
         help=(
-            "Allow short-running tests that spin the rover motors. "
-            "Note the rover should be up on blocks for the duration of this test so it does not drive away."
+            "Allow short-running tests that spin the rover motors. Note the rover should be up on"
+            " blocks for the duration of this test so it does not drive away."
         ),
     )
     test.add_argument(
         "--burninok",
         action="store_true",
         help=(
-            "Allow the long-running burn-in test to verify hardware reliability. "
-            "The rover's wheels will spin during testing. "
-            "Note the rover should be up on blocks for the duration of this test so it does not drive away."
+            "Allow the long-running burn-in test to verify hardware reliability. The rover's"
+            " wheels will spin during testing. Note the rover should be up on blocks for the"
+            " duration of this test so it does not drive away."
         ),
     )
 
@@ -86,7 +89,7 @@ async def amain():
         metavar="k:v",
         nargs="*",
         help="Send additional commands to the rover. v may be 0-255; k may be:\n\t"
-             + "\n\t".join("{}={}".format(s.value, s.name) for s in SETTINGS_VERBS),
+        + "\n\t".join("{}={}".format(s.value, s.name) for s in SETTINGS_VERBS),
     )
     config.add_argument(
         "--commit",
@@ -208,9 +211,10 @@ async def amain():
                 argflags.append(f"--{argname}")
 
         from . import tests
+
         wd = Path(tests.__file__).parent.absolute()
         completed = await trio.run_process(
-            [sys.executable, '-m', 'pytest', *argflags], check=False, cwd=wd
+            [sys.executable, "-m", "pytest", *argflags], check=False, cwd=wd
         )
         sys.exit(completed.returncode)
 

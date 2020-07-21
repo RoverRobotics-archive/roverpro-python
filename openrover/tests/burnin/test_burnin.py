@@ -12,7 +12,8 @@ logger = logging.getLogger(__file__)
 async def control_robot(rover, left, right, flipper, duration):
     rover.set_motor_speeds(left, right, flipper)
     logger.info(
-        f"Sending command left motor: {left} right motor: {right} flipper: {flipper} duration {duration} seconds..."
+        f"Sending command left motor: {left} right motor: {right} flipper: {flipper} duration"
+        f" {duration} seconds..."
     )
     t1 = monotonic()
     while True:
@@ -26,7 +27,9 @@ async def control_robot(rover, left, right, flipper, duration):
             break
 
     logger.info(
-        f" left motor encoder interval: {left_motor_encoder_interval} right motor encoder interval: {right_motor_encoder_interval} left motor temperature: {left_motor_temperature} right motor temperature {right_motor_temperature}"
+        f" left motor encoder interval: {left_motor_encoder_interval} right motor encoder"
+        f" interval: {right_motor_encoder_interval} left motor temperature:"
+        f" {left_motor_temperature} right motor temperature {right_motor_temperature}"
     )
 
     errs = []
