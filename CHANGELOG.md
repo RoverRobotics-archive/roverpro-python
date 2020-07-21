@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- New action `openrover --test` to verify Rover is behaving as intended.
 - New tests for overspeed fault behavior, fan speed behavior, data correctness, battery health, agreement of battery metrics (internal and external)
 - Testing with Tox to ensure compatibility with all supported Python versions
 - Support for new firmware verbs:

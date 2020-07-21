@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "openrover"
-version = "1.0.0-alpha.2"
+version = "1.0.0-alpha.3"
 description = "A Python driver for driving the Rover Robotics OpenRover Basic robot"
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -30,6 +30,7 @@ readme = "README.md"
 
 [tool.poetry.scripts]
 pitstop = 'openrover.pitstop:main'
+openrover-tests = 'openrover:main'
 
 [tool.poetry.dependencies]
 python = "^3.6"
