@@ -283,13 +283,17 @@ async def test_sane_value(rover, elt):
 async def test_power_currents_charging(rover, battery):
     is_charging = await rover.get_data(38)
     assert is_charging in [True, False]
-    battery_current_i2c = await rover.get_data({"A": 68, "B": 70}[battery])
-    if is_charging:
-        # charging battery has positive current
-        assert battery_current_i2c >= 0
-    else:
-        # discharging battery should have negative current
-        assert battery_current_i2c <= 0
+
+    v = await rover.get_data(40)
+
+    if OPENROVER_DATA_ELEMENTS[68].supported(v) and OPENROVER_DATA_ELEMENTS[70].supported(v):
+        battery_current_i2c = await rover.get_data({"A": 68, "B": 70}[battery])
+        if is_charging:
+            # charging battery has positive current
+            assert battery_current_i2c >= 0
+        else:
+            # discharging battery should have negative current
+            assert battery_current_i2c <= 0
 
 
 @pytest.mark.xfail(reason="suspected hardware problems with analog measurements")
