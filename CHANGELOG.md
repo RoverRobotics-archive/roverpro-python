@@ -6,30 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased][unreleased]
 
+## [1.0.0][1.0.0] - 2020-07-21
+
 ### Added
 
-- New action `openrover --test` to verify Rover is behaving as intended.
-- New tests for overspeed fault behavior, fan speed behavior, data correctness, battery health, agreement of battery metrics (internal and external)
-- Testing with Tox to ensure compatibility with all supported Python versions
+- Pitstop can now run verify a rover is behaving as intended with the new `pitstop test` action.
+- New tests for overspeed fault behavior, fan speed behavior, data correctness, battery health, and electrical metrics.
+- On the backend, we now have automated testing to ensure compatibility with all supported Python versions.
 - Support for new firmware verbs:
-  - CLEAR_SYSTEM_FAULT (232)
-  - SET_OVERSPEED_ENCODER_THRESHOLD_ENCODER_100HZ (16)
-  - SET_OVERSPEED_DURATION_100MS (17)
-  - SET_BRAKE_ON_FAULT (18)
+  - `CLEAR_SYSTEM_FAULT` (232)
+  - `SET_OVERSPEED_ENCODER_THRESHOLD_ENCODER_100HZ` (16)
+  - `SET_OVERSPEED_DURATION_100MS` (17)
+  - `SET_BRAKE_ON_FAULT` (18)
 - Support for new firmware data elements:
-  - FAN1_DUTY (78)
-  - FAN2_DUTY (80)
-  - SYSTEM_FAULT_FLAGS (82): (overspeed / overcurrent)
+  - `FAN1_DUTY` (78)
+  - `FAN2_DUTY` (80)
+  - `SYSTEM_FAULT_FLAGS` (82)
 
 ### Fixed
 
 - Serial error handling could previously throw a TypeError on failure to connect to a device instead of an OpenRoverException
 - No more warning when running on Ubuntu: "RuntimeWarning: You seem to already have a custom sys.excepthook handler installed."
-- Previously, Python API would incorrectly convert analog battery current.
+- Previously, Python API would incorrectly convert analog battery current by the wrong factor.
 
 ### Changed
 
-- More docs.
+- Pitstop now uses a more discoverable interface! `pitstop --help` to view available actions and `pitstop <action> --help` for more specific options.
 - Dropped support for Python3.5
 - (dev) This project now builds with `poetry` instead of `setuptools` to provide simpler release process.
 - (dev) Code formatting is now done with Black.
@@ -99,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Basic Python Driver functionality
 
-[unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/0.3.1...HEAD
+[unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/RoverRobotics/openrover-python/compare/0.3.1...1.0.0
 [0.3.1]: https://github.com/RoverRobotics/openrover-python/compare/0.2.1...0.3.1
 [0.2.1]: https://github.com/RoverRobotics/openrover-python/compare/0.0...0.2.1
