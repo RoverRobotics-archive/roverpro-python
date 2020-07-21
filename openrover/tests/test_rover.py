@@ -47,7 +47,7 @@ async def test_recover_from_bad_data(rover):
             result = await rover.get_data(40)
             if result is not None:
                 return
-        except Exception as e:
+        except (OpenRoverException, trio.TooSlowError):
             pass
     assert False
 
