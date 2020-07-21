@@ -28,7 +28,10 @@ def rover_command_arg_pair(arg):
 
 async def amain():
     parser = argparse.ArgumentParser(
-        description="OpenRover companion utility to bootload robot and configure settings.",
+        description=(
+            "OpenRover companion utility to upgrade firmware, configure settings, and test"
+            " hardware health."
+        ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
@@ -37,18 +40,21 @@ async def amain():
         "flash", help="write the given firmware hex file onto the rover"
     )
     flash.add_argument(
-        type=argparse.FileType("r"), dest="hexfile", help="*.hex file containing the new firmware",
+        "hexfile", type=argparse.FileType("r"), help="*.hex file containing the new firmware",
     )
 
     checkversion = pitstop_action.add_parser(
         "checkversion", help="Check the version of firmware installed",
     )
     checkversion.add_argument(
+        "min_version",
         nargs="?",
         type=OpenRoverFirmwareVersion.parse,
-        dest="version_expected",
-        metavar="X | X.Y | X.Y.Z",
-        help="Minimum acceptable version",
+        help=(
+            "Minimum acceptable version, in the format X / X.Y / X.Y.Z\nIf specified and the"
+            " installed firmware is older than this version, we will exit with a non-zero exit"
+            " code"
+        ),
     )
 
     test = pitstop_action.add_parser(
@@ -68,34 +74,36 @@ async def amain():
         "--motorok",
         action="store_true",
         help=(
-            "Allow short-running tests that spin the rover motors. Note the rover should be up on"
-            " blocks for the duration of this test so it does not drive away."
+            "Allow short-running tests that spin the rover wheel motors. Note the rover should"
+            " have its wheels removed or be otherwise immobilized for the duration of the test so"
+            " it does not drive away, rip out cables, etc."
         ),
     )
     test.add_argument(
         "--burninok",
         action="store_true",
         help=(
-            "Allow the long-running burn-in test to verify hardware reliability. The rover's"
-            " wheels will spin during testing. Note the rover should be up on blocks for the"
-            " duration of this test so it does not drive away."
+            "Allow the long-running burn-in test to verify hardware reliability. This will take a"
+            " while (about 30 minutes). Note the rover should have its wheels removed or be"
+            " otherwise immobilized for the duration of the test so it does not drive away, rip"
+            " out cables, etc."
         ),
     )
 
     config = pitstop_action.add_parser("config", help="Update rover persistent settings")
     config.add_argument(
+        "config_items",
         type=rover_command_arg_pair,
-        dest="config_items",
         metavar="k:v",
         nargs="*",
-        help="Send additional commands to the rover. v may be 0-255; k may be:\n\t"
+        help="Send configuration commands to the rover. v may be 0-255; k may be:\n\t"
         + "\n\t".join("{}={}".format(s.value, s.name) for s in SETTINGS_VERBS),
     )
     config.add_argument(
         "--commit",
         action="store_true",
         help=(
-            "Persist these config options across reboot. By default, settings persist only until"
+            "Persist these config options across reboot. By default, changes persist only until"
             " rover is restarted."
         ),
     )
@@ -178,11 +186,11 @@ async def amain():
         else:
             print(f"Firmware version installed = {actual_version}")
 
-        if args.version_expected is not None:
-            print(f"Firmware version expected >= {args.version_expected}")
-            if args.version_expected <= actual_version:
+        if args.min_version is not None:
+            print(f"Firmware version expected >= {args.min_version}")
+            if args.min_version <= actual_version:
                 print(f"Passed :-)")
-            if actual_version < args.version_expected:
+            if actual_version < args.min_version:
                 print(f"Failed :-(")
                 sys.exit(1)
 
