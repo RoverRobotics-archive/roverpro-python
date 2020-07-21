@@ -151,7 +151,6 @@ async def test_overspeed_fault(rover):
     for _ in range(10):
         rover.send_speed()
         await trio.sleep(0.1)
-        assert rover.get_data(28)
         data = await rover.get_data_items([28, 30])
         enc_intervals_left2.append(data[28])
         enc_intervals_right2.append(data[30])
