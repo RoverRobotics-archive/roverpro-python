@@ -5,6 +5,7 @@ from pathlib import Path
 
 import trio
 
+import openrover
 from openrover import OpenRoverProtocol
 from openrover.find_device import get_ftdi_device_paths
 from openrover.openrover_data import OpenRoverFirmwareVersion
@@ -29,7 +30,7 @@ def rover_command_arg_pair(arg):
 async def amain():
     parser = argparse.ArgumentParser(
         description="OpenRover companion utility to bootload robot and configure settings.",
-        formatter_class=argparse.RawTextHelpFormatter,
+        formatter_class=argparse.RawTextHelpFormatter
     )
 
     parser.add_argument(
@@ -52,7 +53,7 @@ async def amain():
         type=OpenRoverFirmwareVersion.parse,
         metavar="version",
         help="Check that the rover reports at least the given version\n"
-        "version may be in the form N.N.N, N.N, or N",
+             "version may be in the form N.N.N, N.N, or N",
     )
     parser.add_argument(
         "-u",
@@ -61,13 +62,21 @@ async def amain():
         metavar="k:v",
         nargs="+",
         help="Send additional commands to the rover. v may be 0-255; k may be:\n\t"
-        + "\n\t".join("{}={}".format(s.value, s.name) for s in SETTINGS_VERBS),
+             + "\n\t".join("{}={}".format(s.value, s.name) for s in SETTINGS_VERBS),
+    )
+    parser.add_argument(
+        "-t",
+        "--test",
+        choices=['bootload', 'motor', 'burnin'],
+        nargs='*',
+        help="Run test suites. The following additional test suites may be selected: bootload, motor, burnin",
+        metavar='EXTRA_TEST'
     )
 
     args = parser.parse_args()
-    if not any([args.flash, args.minimumversion, args.updatesettings]):
+    if not any(a is not None for a in [args.flash, args.minimumversion, args.updatesettings, args.test]):
         parser.error(
-            "No action requested (flash / minimumversion / updatesettings). Use -h to see detailed options."
+            "No action requested (flash / minimumversion / updatesettings / test). Use -h to see detailed options."
         )
 
     port = args.port
@@ -149,6 +158,17 @@ async def amain():
             print()
             orp.write_nowait(0, 0, 0, CommandVerb.COMMIT_SETTINGS, 0)
             await orp.flush()
+
+    if args.test is not None:
+        argflags = []
+        if 'bootload' in args.test:
+            argflags.append('--bootloadok')
+        if 'motor' in args.test:
+            argflags.append('--motorok')
+        if 'burnin' in args.test:
+            argflags.append('--burninok')
+        wd = str(Path(openrover.__file__).parent / 'tests')
+        await trio.run_process([sys.executable, '-m', 'pytest', wd])
 
     print(
         "\n".join(
