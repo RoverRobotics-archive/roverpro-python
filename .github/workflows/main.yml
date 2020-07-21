@@ -24,14 +24,18 @@ jobs:
   
   test:
     needs: build
-    runs-on: openrover
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
     steps:
     - uses: actions/download-artifact@v2
       with:
         name: ${{ runner.os }}
         path: dist
     - if: runner.os != 'Windows'
-      run: chmod +x dist/pitstop 
+      run: chmod +x dist/pitstop
     - run: dist/pitstop --help
 
   test-src:
@@ -54,6 +58,7 @@ jobs:
         python -m openrover.pitstop --help
 
   test-rover:
+    continue-on-error: true
     runs-on: openrover
     steps:
       - uses: actions/checkout@v2
