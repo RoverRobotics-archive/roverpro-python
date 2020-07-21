@@ -30,7 +30,7 @@ def rover_command_arg_pair(arg):
 async def amain():
     parser = argparse.ArgumentParser(
         description="OpenRover companion utility to bootload robot and configure settings.",
-        formatter_class=argparse.RawTextHelpFormatter
+        formatter_class=argparse.RawTextHelpFormatter,
     )
 
     parser.add_argument(

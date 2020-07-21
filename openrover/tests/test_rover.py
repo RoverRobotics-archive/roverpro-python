@@ -1,4 +1,3 @@
-import enum
 import statistics
 
 import pytest
@@ -320,14 +319,15 @@ async def test_fan_temperatures_equal(rover):
     assert fan_temp == pytest.approx(fan_temp2, abs=5)
 
 
-class MotorDirection(enum.IntEnum):
-    FORWARD = +1
-    REVERSE = -1
-    STILL = 0
+motor_direction_param = [
+    pytest.param(+1, id="forward", marks=pytest.mark.motor),
+    pytest.param(-1, id="reverse", marks=pytest.mark.motor),
+    pytest.param(0, id="still"),
+]
 
 
-@pytest.mark.parametrize("right", MotorDirection, ids=lambda x: x.name)
-@pytest.mark.parametrize("left", MotorDirection, ids=lambda x: x.name)
+@pytest.mark.parametrize("right", motor_direction_param)
+@pytest.mark.parametrize("left", motor_direction_param)
 async def test_motor_status(rover, left, right):
     v = await rover.get_data(40)
     if not all(OPENROVER_DATA_ELEMENTS[i].supported(v) for i in (72, 74)):
