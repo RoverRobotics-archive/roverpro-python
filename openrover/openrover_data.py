@@ -55,6 +55,8 @@ class OpenRoverFirmwareVersion(NamedTuple):
     def parse(cls, a_str):
         ver_re = re.compile(r"(\d+(?:[.]\d+){0,2})(?:-([^+])+)?(?:[+](.+))?", re.VERBOSE)
         match = ver_re.fullmatch(a_str)
+        if match is None:
+            raise ValueError
         parts = [int(p) for p in match.group(0).split(".")]
         return OpenRoverFirmwareVersion(*parts)
 

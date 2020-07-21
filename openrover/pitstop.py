@@ -48,7 +48,7 @@ async def amain():
         type=OpenRoverFirmwareVersion.parse,
         dest="version_expected",
         metavar="X | X.Y | X.Y.Z",
-        help="Minimum expected version",
+        help="Minimum acceptable version",
     )
 
     test = pitstop_action.add_parser(
