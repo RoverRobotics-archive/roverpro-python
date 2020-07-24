@@ -30,7 +30,6 @@ readme = "README.md"
 
 [tool.poetry.scripts]
 pitstop = 'openrover.pitstop:main'
-openrover-tests = 'openrover:main'
 
 [tool.poetry.dependencies]
 python = "^3.6"
