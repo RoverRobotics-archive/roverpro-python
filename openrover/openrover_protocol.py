@@ -7,7 +7,7 @@ from .openrover_data import MOTOR_EFFORT_FORMAT, OPENROVER_DATA_ELEMENTS
 from .serial_trio import SerialTrio
 from .util import OpenRoverException
 
-SERIAL_START_BYTE = bytes.fromhex('fd')
+SERIAL_START_BYTE = bytes.fromhex("fd")
 
 
 class CommandVerb(enum.IntEnum):
@@ -38,7 +38,7 @@ class CommandVerb(enum.IntEnum):
 
 
 def encode_packet(*args: bytes):
-    payload = b''.join(args)
+    payload = b"".join(args)
     return SERIAL_START_BYTE + payload + bytes([checksum(payload)])
 
 
@@ -67,23 +67,33 @@ class OpenRoverProtocol:
 
             payload = await self._serial.read_exactly(3)
 
-            actual_checksum, = await self._serial.read_exactly(1)
+            (actual_checksum,) = await self._serial.read_exactly(1)
 
             expected_checksum = checksum(payload)
             if actual_checksum == expected_checksum:
                 return payload
             else:
                 raise OpenRoverException(
-                    'Bad checksum {}, expected {}. Discarding data {}'.format(list(actual_checksum),
-                                                                              list(expected_checksum), list(payload)))
+                    "Bad checksum {}, expected {}. Discarding data {}".format(
+                        list(actual_checksum), list(expected_checksum), list(payload)
+                    )
+                )
 
     async def flush(self):
         await self._serial.flush(0)
 
-    def write_nowait(self, motor_left: float, motor_right: float, flipper: float, command_verb: CommandVerb,
-                     command_arg: int):
-        binary = encode_packet(MOTOR_EFFORT_FORMAT.pack(motor_left),
-                               MOTOR_EFFORT_FORMAT.pack(motor_right),
-                               MOTOR_EFFORT_FORMAT.pack(flipper),
-                               bytes([command_verb, command_arg]))
+    def write_nowait(
+        self,
+        motor_left: float,
+        motor_right: float,
+        flipper: float,
+        command_verb: CommandVerb,
+        command_arg: int,
+    ):
+        binary = encode_packet(
+            MOTOR_EFFORT_FORMAT.pack(motor_left),
+            MOTOR_EFFORT_FORMAT.pack(motor_right),
+            MOTOR_EFFORT_FORMAT.pack(flipper),
+            bytes([command_verb, command_arg]),
+        )
         self._serial.write_nowait(binary)

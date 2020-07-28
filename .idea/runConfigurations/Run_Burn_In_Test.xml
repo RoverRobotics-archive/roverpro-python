@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Run Tests" type="tests" factoryName="py.test">
+  <configuration default="false" name="Run Burn-In Test" type="tests" factoryName="py.test">
     <module name="openrover-python" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -21,8 +21,8 @@
     </EXTENSION>
     <option name="_new_keywords" value="&quot;&quot;" />
     <option name="_new_parameters" value="&quot;&quot;" />
-    <option name="_new_additionalArguments" value="&quot;&quot;" />
-    <option name="_new_target" value="&quot;openrover.tests&quot;" />
+    <option name="_new_additionalArguments" value="&quot;--burninok&quot;" />
+    <option name="_new_target" value="&quot;openrover.tests.burnin&quot;" />
     <option name="_new_targetType" value="&quot;PYTHON&quot;" />
     <method v="2" />
   </configuration>

@@ -25,3 +25,5 @@ venv/
 \.idea/misc\.xml
 
 \.idea/OpenRover Python Driver\.iml
+
+.tox/

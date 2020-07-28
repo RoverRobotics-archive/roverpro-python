@@ -1,0 +1,69 @@
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry]
+name = "openrover"
+version = "1.0.0-rc1"
+description = "A Python driver for driving the Rover Robotics OpenRover Basic robot"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+
+  "License :: OSI Approved :: BSD License",
+  "Operating System :: OS Independent",
+  "Framework :: Trio"
+]
+license = "BSD-3-Clause"
+repository = "https://github.com/RoverRobotics/openrover_python_driver"
+authors = [
+  "Dan Rose <dan@digilabs.io>",
+  "Rover Robotics <info@roverrobotics.com>",
+]
+maintainers = [
+  "Dan Rose <dan@digilabs.io>"
+]
+readme = "README.md"
+
+[tool.poetry.scripts]
+pitstop = 'openrover.pitstop:main'
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+async_generator = "^1.10"
+booty = "^0.3.0"
+pyserial = "^3.4"
+pytest = "^5.4.3"
+pytest-trio = "^0.6.0"
+trio = "^0.16.0"
+
+[tool.poetry.dev-dependencies]
+black = "^19.10b0"
+poetry-githooks = {version = "^1.1.1", python = "^3.7"}
+tox = "^3.15.2"
+pyinstaller = "^3.6"
+# pyinstaller assumes these dependencies are already installed:
+macholib = {version = "^1.14", platform = "darwin"}
+pywin32-ctypes = {version = "^0.2.0", platform = "win32"}
+pefile = {version = "^2019.4.18", platform = "win32"}
+
+[tool.githooks]
+pre-commit = "poetry run black ."
+
+[tool.black]
+line-length = 99
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py36,py37,py38
+isolated_build = True
+
+[testenv]
+deps = pytest
+commands = pytest
+"""
