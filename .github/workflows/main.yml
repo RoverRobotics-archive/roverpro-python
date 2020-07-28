@@ -16,7 +16,7 @@ jobs:
           python -m pip install poetry
           poetry install
           poetry build
-          poetry run pyinstaller ./openrover/pitstop.py --onefile
+          poetry run pyinstaller ./openrover/pitstop.py --onefile --hidden-import='pkg_resources.py2_warn'
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}
