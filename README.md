@@ -76,30 +76,36 @@ tests/burnin/test_burnin.py s                                                   
 
 Manual Prerequisites:
 
-* Python3 (recommended to install Python3.6, Python3.7, and Python3.8)
-* [Poetry](https://python-poetry.org/docs/#installation) 
+* Python3 (recommended to install Python3.6, Python3.7, and Python3.8 if you plan on using tox for all):
+  * On Ubuntu: `sudo apt install python3 python3-venv python3-pip`
+  * On another OS: https://www.python.org/downloads/
+* [Poetry](https://python-poetry.org/docs/#installation):
+  * `curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | (python3 || python)`
 
-Instead, we recommend:
+Then to get and initialize the project:
 
 ```
 git clone https://github.com/RoverRobotics/openrover-python.git
 cd openrover-python
 poetry install
+poetry run githooks setup
 ```
+
+To run a single command: `poetry run pitstop --help`
 
 #### Useful commands
 
-For development testing, it is recommended to use `tox`, which can run tests on multiple Python interpreters.
+Note that you haven't called `poetry shell`, you must prepend the following with `poetry run`
 
 <dl>
     <dt><code>pytest</code></dt>
     <dd>Test on current Python interpreter</dd>
     <dt><code>tox</code></dt>
-    <dd>Test on all supported Python minor versions</dd>
+    <dd>Test across multiple versions of Python</dd>
     <dt><code>black .</code></dt>
     <dd>Reformat code to a uniform style</dd>
-    <dt><code>githooks setup</code></dt>
-    <dd>Install git pre-commit hook to automatically run <code>black</code></dd>
+    <td><code>poetry update</code></td>
+    <dd>Update all dependencies to the latest released version</dd>
 </dl>
 
 ### Caveats
