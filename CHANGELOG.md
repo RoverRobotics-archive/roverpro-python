@@ -24,12 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
-- Serial error handling could previously throw a TypeError on failure to connect to a device instead of an OpenRoverException
+- Serial error handling could previously throw a TypeError on failure to connect to a device instead of an RoverProException
 - No more warning when running on Ubuntu: "RuntimeWarning: You seem to already have a custom sys.excepthook handler installed."
 - Previously, Python API would incorrectly convert analog battery current by the wrong factor.
 
 ### Changed
 
+- To reflect renaming of RoverRobotics' product lines, the name of the repo is now "`roverpro`"
 - Pitstop now uses a more discoverable interface!
   - `pitstop --help` and `pitstop <action> --help` to view usage instructions.
 - Dropped support for Python3.5
@@ -102,6 +103,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Basic Python Driver functionality
 
 [unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/1.0.0...HEAD
-[1.0.0]: https://github.com/RoverRobotics/openrover-python/compare/0.3.1...1.0.0
-[0.3.1]: https://github.com/RoverRobotics/openrover-python/compare/0.2.1...0.3.1
-[0.2.1]: https://github.com/RoverRobotics/openrover-python/compare/0.0...0.2.1
+[1.0.0]: https://github.com/RoverRobotics/roverpro-python/compare/0.3.1...1.0.0
+[0.3.1]: https://github.com/RoverRobotics/roverpro-python/compare/0.2.1...0.3.1
+[0.2.1]: https://github.com/RoverRobotics/roverpro-python/compare/0.0...0.2.1

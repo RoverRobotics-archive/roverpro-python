@@ -3,9 +3,9 @@ requires = ["poetry>=1.0"]
 build-backend = "poetry.masonry.api"
 
 [tool.poetry]
-name = "openrover"
+name = "roverpro"
 version = "1.0.0-rc1"
-description = "A Python driver for driving the Rover Robotics OpenRover Basic robot"
+description = "A Python driver for driving the Rover Robotics Rover Pro robot"
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.6",
@@ -18,7 +18,7 @@ classifiers = [
   "Framework :: Trio"
 ]
 license = "BSD-3-Clause"
-repository = "https://github.com/RoverRobotics/openrover_python_driver"
+repository = "https://github.com/RoverRobotics/roverpro-python"
 authors = [
   "Dan Rose <dan@digilabs.io>",
   "Rover Robotics <info@roverrobotics.com>",
@@ -29,7 +29,7 @@ maintainers = [
 readme = "README.md"
 
 [tool.poetry.scripts]
-pitstop = 'openrover.pitstop:main'
+pitstop = 'roverpro.pitstop:main'
 
 [tool.poetry.dependencies]
 python = "^3.6"

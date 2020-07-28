@@ -1,4 +1,4 @@
-# OpenRover Python Suite
+# Rover Pro Python Suite
 
 This is the official Python driver for the [Rover Robotics](https://roverrobotics.com/) "Open Rover Basic" robot. Use this as a starting point to get up and running quickly.
 
@@ -8,7 +8,7 @@ Included in this package are:
 2. A command line application "`pitstop`" for upgrading and configuring the Rover firmware
 3. A test suite that confirms the Firmware and hardware are operating as expected.
 
-![OpenRover Basic](https://docs.roverrobotics.com/1-manuals/0-cover-photos/1-open-rover-basic-getting-started-vga.jpg)
+![Rover Pro Basic](https://docs.roverrobotics.com/1-manuals/0-cover-photos/1-open-rover-basic-getting-started-vga.jpg)
 
 ## Setup
 
@@ -16,7 +16,7 @@ To install official releases from PyPi:
 
 ```shell script
 python3 -m pip install -U pip setuptools
-python3 -m pip install -U openrover --no-cache-dir
+python3 -m pip install -U roverpro --no-cache-dir
 ```
 
 On Linux, you may not have permission to access USB devices. If this is the case, run the following then restart your computer:
@@ -27,13 +27,13 @@ sudo usermod -a -G dialout $(whoami)
 
 ### pitstop
 
-Pitstop is a helper program to bootload your rover and set options. After installing the openrover package, you can invoke it with `pitstop` or `python3 -m openrover.pitstop`.
+Pitstop is a helper program to bootload your rover and set options. After installing the roverpro package, you can invoke it with `pitstop` or `python3 -m roverpro.pitstop`.
 
 ```text
 > pitstop --help
   usage: pitstop [-h] [-p port] action ...
   
-  OpenRover companion utility to upgrade firmware, configure settings, and test hardware health.
+  Rover Pro companion utility to upgrade firmware, configure settings, and test hardware health.
   
   positional arguments:
     action
@@ -58,13 +58,13 @@ Scanning for possible rover devices
 Using device /dev/ttyUSB0
 ========================== test session starts ============================
 platform linux -- Python 3.8.2, pytest-5.4.3, py-1.9.0, pluggy-0.13.1
-rootdir: /home/dan/Documents/openrover-python/openrover
+rootdir: /home/dan/Documents/roverpro-python/roverpro
 plugins: trio-0.6.0
 collected 73 items                                                                                                                                                                                           
 
 tests/test_bootloader.py .s                                                                                                                                                                            [  2%]
 tests/test_find_device.py .....                                                                                                                                                                        [  9%]
-tests/test_openrover_protocol.py ....                                                                                                                                                                  [ 15%]
+tests/test_roverpro_protocol.py ....                                                                                                                                                                  [ 15%]
 tests/test_rover.py ..................x.x.........x................Xxxx..........                                                                                                                      [ 98%]
 tests/burnin/test_burnin.py s                                                                                                                                                                          [100%]
 
@@ -85,8 +85,8 @@ Manual Prerequisites:
 Then to get and initialize the project:
 
 ```
-git clone https://github.com/RoverRobotics/openrover-python.git
-cd openrover-python
+git clone https://github.com/RoverRobotics/roverpro-python.git
+cd roverpro-python
 poetry install
 poetry run githooks setup
 ```
