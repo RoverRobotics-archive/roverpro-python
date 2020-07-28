@@ -35,16 +35,17 @@ async def amain():
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
-    pitstop_action = parser.add_subparsers(dest="action", required=True, metavar="action")
+    pitstop_action = parser.add_subparsers(dest="action", metavar="action")
+    pitstop_action.required = True
     flash = pitstop_action.add_parser(
         "flash", help="write the given firmware hex file onto the rover"
     )
     flash.add_argument(
-        "hexfile", type=argparse.FileType("r"), help="*.hex file containing the new firmware",
+        "hexfile", type=argparse.FileType("r"), help="*.hex file containing the new firmware"
     )
 
     checkversion = pitstop_action.add_parser(
-        "checkversion", help="Check the version of firmware installed",
+        "checkversion", help="Check the version of firmware installed"
     )
     checkversion.add_argument(
         "min_version",

@@ -298,7 +298,7 @@ async def test_power_currents_charging(rover, battery):
 
 @pytest.mark.xfail(reason="suspected hardware problems with analog measurements")
 @pytest.mark.parametrize(
-    ("elt_analog", "elt_i2c"), (pytest.param(24, 64, id="A"), pytest.param(26, 66, id="B")),
+    ("elt_analog", "elt_i2c"), (pytest.param(24, 64, id="A"), pytest.param(26, 66, id="B"))
 )
 async def test_power_analog_i2c_voltages_agree(rover, elt_analog, elt_i2c):
     value_analog = await rover.get_data(elt_analog)
@@ -308,7 +308,7 @@ async def test_power_analog_i2c_voltages_agree(rover, elt_analog, elt_i2c):
 
 @pytest.mark.xfail(reason="suspected hardware problems with analog measurements")
 @pytest.mark.parametrize(
-    ("elt_analog", "elt_i2c"), (pytest.param(42, 68, id="A"), pytest.param(44, 70, id="B")),
+    ("elt_analog", "elt_i2c"), (pytest.param(42, 68, id="A"), pytest.param(44, 70, id="B"))
 )
 async def test_power_analog_i2c_currents_agree(rover, elt_analog, elt_i2c):
     value_analog = await rover.get_data(elt_analog)
