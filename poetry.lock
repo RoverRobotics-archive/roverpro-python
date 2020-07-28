@@ -280,13 +280,17 @@ category = "dev"
 description = "Simple git hooks with poetry"
 name = "poetry-githooks"
 optional = false
-python-versions = ">=3.7,<4.0"
+python-versions = "^3.6"
 version = "1.1.1"
 
 [package.dependencies]
 click = ">=7.1.2,<8.0.0"
 toml = ">=0.10.0,<0.11.0"
 
+[package.source]
+reference = "6acb2950ec899a32fcb5fa9a726c1a3226ae31eb"
+type = "git"
+url = "https://github.com/rotu/poetry-githooks"
 [[package]]
 category = "main"
 description = "library with cross-python path, ini-parsing, io, code, log facilities"
@@ -509,7 +513,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "44be995f4b2fefd10b1b65768d3a16f42c03d013bf8b82459971f7cdd97aeec2"
+content-hash = "fafc1ef6a900111b0cb8dfb363053b266f73d75eab307fad6e03c7b9baa64bac"
 lock-version = "1.1"
 python-versions = "^3.6"
 
@@ -655,10 +659,7 @@ pluggy = [
     {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},
     {file = "pluggy-0.13.1.tar.gz", hash = "sha256:15b2acde666561e1298d71b523007ed7364de07029219b604cf808bfa1c765b0"},
 ]
-poetry-githooks = [
-    {file = "poetry-githooks-1.1.1.tar.gz", hash = "sha256:6343d09d1301ea9d2bf00fd1b294917dbaae517ca65b93af31352caef26c89b3"},
-    {file = "poetry_githooks-1.1.1-py3-none-any.whl", hash = "sha256:8382594285c7f3d4aa89aa9027151b2d88004562ba3b5868e7ea9b43e40a60ac"},
-]
+poetry-githooks = []
 py = [
     {file = "py-1.9.0-py2.py3-none-any.whl", hash = "sha256:366389d1db726cd2fcfc79732e75410e5fe4d31db13692115529d34069a043c2"},
     {file = "py-1.9.0.tar.gz", hash = "sha256:9ca6883ce56b4e8da7e79ac18787889fa5206c79dcc67fb065376cd2fe03f342"},
