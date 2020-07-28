@@ -1,6 +1,6 @@
 import pytest
 
-from openrover.find_device import *
+from roverpro.find_device import *
 
 
 def test_ftdi_device_paths():
@@ -10,18 +10,18 @@ def test_ftdi_device_paths():
         assert name != ""
 
 
-async def test_open_any_openrover_device():
+async def test_open_any_rover_device():
     if len(get_ftdi_device_paths()) == 0:
         pytest.skip("no FTDI devices found")
 
     async with open_rover_device() as device:
         assert isinstance(device, SerialTrio)
         # the device must still be open here
-        assert await get_openrover_protocol_version(device) is not None
+        assert await get_rover_protocol_version(device) is not None
 
     # the device must be closed afterwards
-    with pytest.raises(OpenRoverException):
-        await get_openrover_protocol_version(device)
+    with pytest.raises(RoverException):
+        await get_rover_protocol_version(device)
 
 
 async def test_open_rover_device_sequentially_okay():
@@ -38,12 +38,12 @@ async def test_open_rover_device_nested_fails():
         pytest.skip("no FTDI devices found")
 
     async with open_rover_device() as d:
-        with pytest.raises(OpenRoverException):
+        with pytest.raises(RoverException):
             async with SerialTrio(d.port):
                 pass
 
 
 async def test_missing_device():
-    with pytest.raises(OpenRoverException):
+    with pytest.raises(RoverException):
         async with SerialTrio("/dev/nosuchdevice") as d2:
             pass

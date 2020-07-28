@@ -4,7 +4,7 @@ from time import monotonic
 import pytest
 import trio
 
-from openrover import open_rover
+from roverpro import open_rover
 
 logger = logging.getLogger(__file__)
 

@@ -3,9 +3,9 @@ from typing import Any, Tuple
 
 import trio
 
-from .openrover_data import MOTOR_EFFORT_FORMAT, OPENROVER_DATA_ELEMENTS
+from .rover_data import MOTOR_EFFORT_FORMAT, ROVER_DATA_ELEMENTS
 from .serial_trio import SerialTrio
-from .util import OpenRoverException
+from .util import RoverException
 
 SERIAL_START_BYTE = bytes.fromhex("fd")
 
@@ -46,9 +46,9 @@ def checksum(values):
     return 255 - sum(values) % 255
 
 
-class OpenRoverProtocol:
+class RoverProtocol:
     def __init__(self, serial: SerialTrio):
-        """Low-level communication for OpenRover"""
+        """Low-level communication for Rover Pro"""
         self._serial = serial
         # A packet involves multiple read operations, so we must lock the device for reading
         self._read_lock = trio.StrictFIFOLock()
@@ -56,7 +56,7 @@ class OpenRoverProtocol:
     async def read_one(self) -> Tuple[int, Any]:
         raw_data = await self._read_one_raw()
         data_element_index = raw_data[0]
-        element_descriptor = OPENROVER_DATA_ELEMENTS[data_element_index]
+        element_descriptor = ROVER_DATA_ELEMENTS[data_element_index]
         data_element_value = element_descriptor.data_format.unpack(raw_data[1:])
         return data_element_index, data_element_value
 
@@ -73,7 +73,7 @@ class OpenRoverProtocol:
             if actual_checksum == expected_checksum:
                 return payload
             else:
-                raise OpenRoverException(
+                raise RoverException(
                     "Bad checksum {}, expected {}. Discarding data {}".format(
                         list(actual_checksum), list(expected_checksum), list(payload)
                     )

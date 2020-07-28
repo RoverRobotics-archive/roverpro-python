@@ -46,11 +46,11 @@ class IntDataFormat(ReadDataFormat, WriteDataFormat):
         return int.from_bytes(b, byteorder="big", signed=self.signed)
 
 
-OPENROVER_LEGACY_VERSION = 40621
+ROVER_LEGACY_VERSION = 40621
 
 
 @functools.total_ordering
-class OpenRoverFirmwareVersion(NamedTuple):
+class RoverFirmwareVersion(NamedTuple):
     @classmethod
     def parse(cls, a_str):
         ver_re = re.compile(r"(\d+(?:[.]\d+){0,2})(?:-([^+])+)?(?:[+](.+))?", re.VERBOSE)
@@ -58,7 +58,7 @@ class OpenRoverFirmwareVersion(NamedTuple):
         if match is None:
             raise ValueError
         parts = [int(p) for p in match.group(0).split(".")]
-        return OpenRoverFirmwareVersion(*parts)
+        return RoverFirmwareVersion(*parts)
 
     major: int
     minor: int = 0
@@ -88,13 +88,13 @@ class OpenRoverFirmwareVersion(NamedTuple):
 
 
 class DataFormatFirmwareVersion(ReadDataFormat):
-    python_type = OpenRoverFirmwareVersion
+    python_type = RoverFirmwareVersion
 
     def unpack(self, b):
         v = UINT16.unpack(b)
-        if v == OPENROVER_LEGACY_VERSION:
-            return OpenRoverFirmwareVersion(1, 0, 0)
-        return OpenRoverFirmwareVersion(v // 10000, v // 100 % 100, v % 10)
+        if v == ROVER_LEGACY_VERSION:
+            return RoverFirmwareVersion(1, 0, 0)
+        return RoverFirmwareVersion(v // 10000, v // 100 % 100, v % 10)
 
     def description(self):
         return (
@@ -310,17 +310,17 @@ class DataElement:
         self.name = name
         self.description = description
         self.not_implemented = not_implemented
-        self.since_version = None if since is None else OpenRoverFirmwareVersion.parse(since)
-        self.until_version = None if until is None else OpenRoverFirmwareVersion.parse(until)
+        self.since_version = None if since is None else RoverFirmwareVersion.parse(since)
+        self.until_version = None if until is None else RoverFirmwareVersion.parse(until)
 
     def supported(self, version):
         if isinstance(version, str):
-            v = OpenRoverFirmwareVersion.parse(version)
-        elif isinstance(version, OpenRoverFirmwareVersion):
+            v = RoverFirmwareVersion.parse(version)
+        elif isinstance(version, RoverFirmwareVersion):
             v = version
         else:
             raise TypeError(
-                f"Expected string or OpenRoverFirmwareVersion, but got {type(version)}"
+                f"Expected string or {type(RoverFirmwareVersion)}, but got {type(version)}"
             )
 
         if self.not_implemented:
@@ -440,7 +440,7 @@ elements = [
     DataElement(82, DataFormatSystemFault(), "system fault flags", since="1.10"),
 ]
 
-OPENROVER_DATA_ELEMENTS = {e.index: e for e in elements}
+ROVER_DATA_ELEMENTS = {e.index: e for e in elements}
 
 
 def strike(s):

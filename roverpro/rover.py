@@ -3,11 +3,11 @@ from typing import Any, Dict, Iterable, Optional
 import trio
 from async_generator import asynccontextmanager
 
-from openrover.find_device import open_rover_device
-from openrover.openrover_data import OPENROVER_DATA_ELEMENTS
-from .openrover_protocol import CommandVerb, OpenRoverProtocol
+from roverpro.find_device import open_rover_device
+from roverpro.rover_data import ROVER_DATA_ELEMENTS
+from .rover_protocol import CommandVerb, RoverProtocol
 from .serial_trio import SerialTrio
-from .util import OpenRoverException
+from .util import RoverException
 
 
 @asynccontextmanager
@@ -29,17 +29,16 @@ class Rover:
     _device = None
 
     def __init__(self):
-        """An OpenRover object"""
         self._motor_left = 0
         self._motor_right = 0
         self._motor_flipper = 0
-        self._openrover_data_to_memory_channel = {
-            i: trio.open_memory_channel(0) for i in OPENROVER_DATA_ELEMENTS.keys()
+        self._rover_data_to_memory_channel = {
+            i: trio.open_memory_channel(0) for i in ROVER_DATA_ELEMENTS.keys()
         }
 
     async def set_device(self, device: SerialTrio):
         self._device = device
-        self._rover_protocol = OpenRoverProtocol(device)
+        self._rover_protocol = RoverProtocol(device)
 
     def set_motor_speeds(self, left, right, flipper):
         assert -1 <= left <= 1
@@ -74,7 +73,7 @@ class Rover:
         with trio.fail_after(1):
             k, data = await self._rover_protocol.read_one()
             if k != index:
-                raise OpenRoverException(
+                raise RoverException(
                     f"Received unexpected data. Expected {index}, received {k}:{data}"
                 )
 
@@ -90,7 +89,7 @@ class Rover:
             with trio.fail_after(1):
                 k, data = await self._rover_protocol.read_one()
                 if k != index:
-                    raise OpenRoverException(
+                    raise RoverException(
                         "Received unexpected data. Expected {}, received {}:{}".format(
                             index, k, data
                         )
@@ -100,15 +99,15 @@ class Rover:
         return result
 
 
-async def get_openrover_version(port):
+async def get_rover_version(port):
     try:
         with trio.fail_after(1):
             async with SerialTrio(port, baudrate=57600) as device:
-                orp = OpenRoverProtocol(device)
+                orp = RoverProtocol(device)
                 for i in range(2):
                     orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
                     k, version = await orp.read_one()
                     if k == 40:
                         return version
     except Exception as e:
-        raise OpenRoverException("Did not respond to request for OpenRover version") from e
+        raise RoverException("Did not respond to request for rover firmware version") from e

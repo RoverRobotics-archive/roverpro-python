@@ -3,10 +3,10 @@ import statistics
 import pytest
 import trio
 
-from openrover.find_device import open_rover_device
-from openrover.openrover_data import OpenRoverFirmwareVersion
-from openrover.openrover_protocol import CommandVerb, OpenRoverProtocol
-from openrover.util import RoverDeviceNotFound
+from roverpro.find_device import open_rover_device
+from roverpro.rover_data import RoverFirmwareVersion
+from roverpro.rover_protocol import CommandVerb, RoverProtocol
+from roverpro.util import RoverDeviceNotFound
 
 n = 100
 
@@ -15,7 +15,7 @@ n = 100
 async def protocol():
     try:
         async with open_rover_device() as r:
-            yield OpenRoverProtocol(r)
+            yield RoverProtocol(r)
     except RoverDeviceNotFound:
         pytest.skip("This test requires a rover device but none was found")
 
@@ -41,7 +41,7 @@ async def test_protocol_write_read_immediate(protocol):
         with trio.fail_after(1):
             key, version = await protocol.read_one()
             assert key == 40
-            assert isinstance(version, OpenRoverFirmwareVersion)
+            assert isinstance(version, RoverFirmwareVersion)
             assert isinstance(version.value, int)
             assert 0 < version.value
             n_received += 1
@@ -59,7 +59,7 @@ async def test_protocol_writes_then_reads(protocol):
             with trio.fail_after(5):
                 key, version = await protocol.read_one()
                 assert key == 40
-                assert isinstance(version, OpenRoverFirmwareVersion)
+                assert isinstance(version, RoverFirmwareVersion)
                 assert isinstance(version.value, int)
                 assert 0 < version.value
                 n_received += 1

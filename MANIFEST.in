@@ -1,2 +1,2 @@
-recursive-include openrover/tests/resources *
+recursive-include roverpro/tests/resources *
 prune .idea
