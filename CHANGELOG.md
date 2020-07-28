@@ -11,8 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Pitstop can now run verify a rover is behaving as intended with the new `pitstop test` action.
-- New tests for overspeed fault behavior, fan speed behavior, data correctness, battery health, and electrical metrics.
-- On the backend, we now have automated testing to ensure compatibility with all supported Python versions.
+  - New tests for overspeed fault behavior, fan speed behavior, data correctness, battery health, and electrical metrics.
 - Support for new firmware verbs:
   - `CLEAR_SYSTEM_FAULT` (232)
   - `SET_OVERSPEED_ENCODER_THRESHOLD_ENCODER_100HZ` (16)
@@ -31,9 +30,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- Pitstop now uses a more discoverable interface! `pitstop --help` to view available actions and `pitstop <action> --help` for more specific options.
+- Pitstop now uses a more discoverable interface!
+  - `pitstop --help` and `pitstop <action> --help` to view usage instructions.
 - Dropped support for Python3.5
-- (dev) This project now builds with `poetry` instead of `setuptools` to provide simpler release process.
+- (dev) This project now builds with `poetry` instead of `setuptools` to provide simpler development and release process.
 - (dev) Code formatting is now done with Black.
 
 ## [0.3.1][0.3.1] - 2019-05-08
