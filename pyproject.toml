@@ -43,7 +43,7 @@ trio = "^0.16.0"
 
 [tool.poetry.dev-dependencies]
 black = "^19.10b0"
-poetry-githooks = {version = "^1.1.1", python = "^3.7"}
+poetry-githooks = {git = "https://github.com/rotu/poetry-githooks"}
 tox = "^3.15.2"
 pyinstaller = "^3.6"
 # pyinstaller assumes these dependencies are already installed:
