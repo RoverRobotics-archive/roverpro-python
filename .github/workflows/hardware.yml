@@ -1,0 +1,8 @@
+name: Run against hardware
+on: push
+jobs:
+  test-rover:
+    runs-on: roverpro
+    steps:
+    - uses: actions/checkout@v2
+    - run: tox

@@ -56,9 +56,3 @@ jobs:
     - run: |
         python -m pip install roverpro --find-links dist/
         python -m roverpro.pitstop --help
-
-  test-rover:
-    runs-on: roverpro
-    steps:
-    - uses: actions/checkout@v2
-    - run: tox
