@@ -9,6 +9,7 @@ version = "1.10"
 [[package]]
 category = "main"
 description = "Atomic file writes."
+marker = "sys_platform == \"win32\""
 name = "atomicwrites"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -44,6 +45,7 @@ pyserial = ">=3.3"
 [[package]]
 category = "main"
 description = "Foreign Function Interface for Python calling C code."
+marker = "os_name == \"nt\" and implementation_name != \"pypy\""
 name = "cffi"
 optional = false
 python-versions = "*"
@@ -63,6 +65,7 @@ version = "7.1.2"
 [[package]]
 category = "main"
 description = "Cross-platform colored terminal text."
+marker = "sys_platform == \"win32\""
 name = "colorama"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
@@ -71,6 +74,7 @@ version = "0.4.3"
 [[package]]
 category = "main"
 description = "PEP 567 Backport"
+marker = "python_version < \"3.7\""
 name = "contextvars"
 optional = false
 python-versions = "*"
@@ -90,6 +94,7 @@ version = "2.10"
 [[package]]
 category = "main"
 description = "Immutable Collections"
+marker = "python_version < \"3.7\""
 name = "immutables"
 optional = false
 python-versions = ">=3.5"
@@ -98,6 +103,7 @@ version = "0.14"
 [[package]]
 category = "main"
 description = "Read metadata from Python packages"
+marker = "python_version < \"3.8\""
 name = "importlib-metadata"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
@@ -158,7 +164,9 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "0.13.1"
 
 [package.dependencies]
-importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12"
 
 [package.extras]
 dev = ["pre-commit", "tox"]
@@ -174,6 +182,7 @@ version = "1.9.0"
 [[package]]
 category = "main"
 description = "C parser in Python"
+marker = "os_name == \"nt\" and implementation_name != \"pypy\""
 name = "pycparser"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -204,15 +213,18 @@ python-versions = ">=3.5"
 version = "5.4.3"
 
 [package.dependencies]
+atomicwrites = ">=1.0"
 attrs = ">=17.4.0"
+colorama = "*"
 more-itertools = ">=4.0.0"
 packaging = "*"
 pluggy = ">=0.12,<1.0"
 py = ">=1.5.0"
 wcwidth = "*"
-atomicwrites = {version = ">=1.0", markers = "sys_platform == \"win32\""}
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12"
 
 [package.extras]
 checkqa-mypy = ["mypy (v0.761)"]
@@ -265,7 +277,9 @@ python-versions = ">=3.5"
 version = "1.1.0"
 
 [package.dependencies]
-contextvars = {version = ">=2.1", markers = "python_version < \"3.7\""}
+[package.dependencies.contextvars]
+python = "<3.7"
+version = ">=2.1"
 
 [[package]]
 category = "main"
@@ -286,12 +300,15 @@ version = "0.16.0"
 [package.dependencies]
 async-generator = ">=1.9"
 attrs = ">=19.2.0"
+cffi = ">=1.14"
 idna = "*"
 outcome = "*"
 sniffio = "*"
 sortedcontainers = "*"
-cffi = {version = ">=1.14", markers = "os_name == \"nt\" and implementation_name != \"pypy\""}
-contextvars = {version = ">=2.1", markers = "python_version < \"3.7\""}
+
+[package.dependencies.contextvars]
+python = "<3.7"
+version = ">=2.1"
 
 [[package]]
 category = "main"
@@ -304,6 +321,7 @@ version = "0.2.5"
 [[package]]
 category = "main"
 description = "Backport of pathlib-compatible object wrapper for zip files"
+marker = "python_version < \"3.8\""
 name = "zipp"
 optional = false
 python-versions = ">=3.6"
@@ -315,7 +333,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
 content-hash = "c91b1ac0f55dd0450eff1903468581ef91d47fca26f23c7f610de5d0bc8e5238"
-lock-version = "1.1"
+lock-version = "1.0"
 python-versions = "^3.6"
 
 [metadata.files]

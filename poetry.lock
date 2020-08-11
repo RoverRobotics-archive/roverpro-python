@@ -25,6 +25,7 @@ version = "1.10"
 [[package]]
 category = "main"
 description = "Atomic file writes."
+marker = "sys_platform == \"win32\""
 name = "atomicwrites"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -80,6 +81,7 @@ pyserial = ">=3.3"
 [[package]]
 category = "main"
 description = "Foreign Function Interface for Python calling C code."
+marker = "os_name == \"nt\" and implementation_name != \"pypy\""
 name = "cffi"
 optional = false
 python-versions = "*"
@@ -99,6 +101,7 @@ version = "7.1.2"
 [[package]]
 category = "main"
 description = "Cross-platform colored terminal text."
+marker = "sys_platform == \"win32\" or platform_system == \"Windows\""
 name = "colorama"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
@@ -107,6 +110,7 @@ version = "0.4.3"
 [[package]]
 category = "main"
 description = "PEP 567 Backport"
+marker = "python_version < \"3.7\""
 name = "contextvars"
 optional = false
 python-versions = "*"
@@ -142,6 +146,7 @@ version = "3.0.12"
 [[package]]
 category = "dev"
 description = "Clean single-source support for Python 3 and 2"
+marker = "sys_platform == \"win32\""
 name = "future"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
@@ -158,6 +163,7 @@ version = "2.10"
 [[package]]
 category = "main"
 description = "Immutable Collections"
+marker = "python_version < \"3.7\""
 name = "immutables"
 optional = false
 python-versions = ">=3.5"
@@ -166,6 +172,7 @@ version = "0.14"
 [[package]]
 category = "main"
 description = "Read metadata from Python packages"
+marker = "python_version < \"3.8\""
 name = "importlib-metadata"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
@@ -181,13 +188,16 @@ testing = ["packaging", "pep517", "importlib-resources (>=1.3)"]
 [[package]]
 category = "dev"
 description = "Read resources from Python packages"
+marker = "python_version < \"3.7\""
 name = "importlib-resources"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 version = "3.0.0"
 
 [package.dependencies]
-zipp = {version = ">=0.4", markers = "python_version < \"3.8\""}
+[package.dependencies.zipp]
+python = "<3.8"
+version = ">=0.4"
 
 [package.extras]
 docs = ["sphinx", "rst.linker", "jaraco.packaging"]
@@ -203,6 +213,7 @@ version = "2.2.1"
 [[package]]
 category = "dev"
 description = "Mach-O header analysis and editing"
+marker = "sys_platform == \"darwin\""
 name = "macholib"
 optional = false
 python-versions = "*"
@@ -253,6 +264,7 @@ version = "0.8.0"
 [[package]]
 category = "dev"
 description = "Python PE parsing module"
+marker = "sys_platform == \"win32\""
 name = "pefile"
 optional = false
 python-versions = "*"
@@ -270,22 +282,24 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "0.13.1"
 
 [package.dependencies]
-importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12"
 
 [package.extras]
 dev = ["pre-commit", "tox"]
 
 [[package]]
 category = "dev"
-description = "Simple git hooks with poetry"
+description = ""
 name = "poetry-githooks"
 optional = false
 python-versions = "^3.6"
 version = "1.1.1"
 
 [package.dependencies]
-click = ">=7.1.2,<8.0.0"
-toml = ">=0.10.0,<0.11.0"
+click = "^7.1.2"
+toml = "^0.10.0"
 
 [package.source]
 reference = "6acb2950ec899a32fcb5fa9a726c1a3226ae31eb"
@@ -302,6 +316,7 @@ version = "1.9.0"
 [[package]]
 category = "main"
 description = "C parser in Python"
+marker = "os_name == \"nt\" and implementation_name != \"pypy\""
 name = "pycparser"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
@@ -318,6 +333,7 @@ version = "3.6"
 [package.dependencies]
 altgraph = "*"
 dis3 = "*"
+setuptools = "*"
 
 [[package]]
 category = "main"
@@ -344,15 +360,18 @@ python-versions = ">=3.5"
 version = "5.4.3"
 
 [package.dependencies]
+atomicwrites = ">=1.0"
 attrs = ">=17.4.0"
+colorama = "*"
 more-itertools = ">=4.0.0"
 packaging = "*"
 pluggy = ">=0.12,<1.0"
 py = ">=1.5.0"
 wcwidth = "*"
-atomicwrites = {version = ">=1.0", markers = "sys_platform == \"win32\""}
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-importlib-metadata = {version = ">=0.12", markers = "python_version < \"3.8\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12"
 
 [package.extras]
 checkqa-mypy = ["mypy (v0.761)"]
@@ -375,6 +394,7 @@ trio = ">=0.15.0"
 [[package]]
 category = "dev"
 description = ""
+marker = "sys_platform == \"win32\""
 name = "pywin32-ctypes"
 optional = false
 python-versions = "*"
@@ -405,7 +425,9 @@ python-versions = ">=3.5"
 version = "1.1.0"
 
 [package.dependencies]
-contextvars = {version = ">=2.1", markers = "python_version < \"3.7\""}
+[package.dependencies.contextvars]
+python = "<3.7"
+version = ">=2.1"
 
 [[package]]
 category = "main"
@@ -429,9 +451,10 @@ description = "tox is a generic virtualenv management and test command line tool
 name = "tox"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
-version = "3.18.1"
+version = "3.19.0"
 
 [package.dependencies]
+colorama = ">=0.4.1"
 filelock = ">=3.0.0"
 packaging = ">=14"
 pluggy = ">=0.12.0"
@@ -439,8 +462,10 @@ py = ">=1.4.17"
 six = ">=1.14.0"
 toml = ">=0.9.4"
 virtualenv = ">=16.0.0,<20.0.0 || >20.0.0,<20.0.1 || >20.0.1,<20.0.2 || >20.0.2,<20.0.3 || >20.0.3,<20.0.4 || >20.0.4,<20.0.5 || >20.0.5,<20.0.6 || >20.0.6,<20.0.7 || >20.0.7"
-colorama = {version = ">=0.4.1", markers = "platform_system == \"Windows\""}
-importlib-metadata = {version = ">=0.12,<2", markers = "python_version < \"3.8\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12,<2"
 
 [package.extras]
 docs = ["pygments-github-lexers (>=0.0.5)", "sphinx (>=2.0.0)", "sphinxcontrib-autoprogram (>=0.1.5)", "towncrier (>=18.5.0)"]
@@ -457,12 +482,15 @@ version = "0.16.0"
 [package.dependencies]
 async-generator = ">=1.9"
 attrs = ">=19.2.0"
+cffi = ">=1.14"
 idna = "*"
 outcome = "*"
 sniffio = "*"
 sortedcontainers = "*"
-cffi = {version = ">=1.14", markers = "os_name == \"nt\" and implementation_name != \"pypy\""}
-contextvars = {version = ">=2.1", markers = "python_version < \"3.7\""}
+
+[package.dependencies.contextvars]
+python = "<3.7"
+version = ">=2.1"
 
 [[package]]
 category = "dev"
@@ -478,15 +506,21 @@ description = "Virtual Python Environment builder"
 name = "virtualenv"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
-version = "20.0.28"
+version = "20.0.30"
 
 [package.dependencies]
 appdirs = ">=1.4.3,<2"
 distlib = ">=0.3.1,<1"
 filelock = ">=3.0.0,<4"
 six = ">=1.9.0,<2"
-importlib-metadata = {version = ">=0.12,<2", markers = "python_version < \"3.8\""}
-importlib-resources = {version = ">=1.0", markers = "python_version < \"3.7\""}
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12,<2"
+
+[package.dependencies.importlib-resources]
+python = "<3.7"
+version = ">=1.0"
 
 [package.extras]
 docs = ["proselint (>=0.10.2)", "sphinx (>=3)", "sphinx-argparse (>=0.2.5)", "sphinx-rtd-theme (>=0.4.3)", "towncrier (>=19.9.0rc1)"]
@@ -503,6 +537,7 @@ version = "0.2.5"
 [[package]]
 category = "main"
 description = "Backport of pathlib-compatible object wrapper for zip files"
+marker = "python_version < \"3.8\""
 name = "zipp"
 optional = false
 python-versions = ">=3.6"
@@ -514,7 +549,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
 content-hash = "fafc1ef6a900111b0cb8dfb363053b266f73d75eab307fad6e03c7b9baa64bac"
-lock-version = "1.1"
+lock-version = "1.0"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -731,8 +766,8 @@ toml = [
     {file = "toml-0.10.1.tar.gz", hash = "sha256:926b612be1e5ce0634a2ca03470f95169cf16f939018233a670519cb4ac58b0f"},
 ]
 tox = [
-    {file = "tox-3.18.1-py2.py3-none-any.whl", hash = "sha256:3d914480c46232c2d1a035482242535a26d76cc299e4fd28980c858463206f45"},
-    {file = "tox-3.18.1.tar.gz", hash = "sha256:5c82e40046a91dbc80b6bd08321b13b4380d8ce3bcb5b62616cb17aaddefbb3a"},
+    {file = "tox-3.19.0-py2.py3-none-any.whl", hash = "sha256:3d94b6921a0b6dc90fd8128df83741f30bb41ccd6cd52d131a6a6944ca8f16e6"},
+    {file = "tox-3.19.0.tar.gz", hash = "sha256:17e61a93afe5c49281fb969ab71f7a3f22d7586d1c56f9a74219910f356fe7d3"},
 ]
 trio = [
     {file = "trio-0.16.0-py3-none-any.whl", hash = "sha256:451ddb27b4e5215e00646fcbb8028d341fccf284e053dc376506a14bb133dbcf"},
@@ -762,8 +797,8 @@ typed-ast = [
     {file = "typed_ast-1.4.1.tar.gz", hash = "sha256:8c8aaad94455178e3187ab22c8b01a3837f8ee50e09cf31f1ba129eb293ec30b"},
 ]
 virtualenv = [
-    {file = "virtualenv-20.0.28-py2.py3-none-any.whl", hash = "sha256:8f582a030156282a9ee9d319984b759a232b07f86048c1d6a9e394afa44e78c8"},
-    {file = "virtualenv-20.0.28.tar.gz", hash = "sha256:688a61d7976d82b92f7906c367e83bb4b3f0af96f8f75bfcd3da95608fe8ac6c"},
+    {file = "virtualenv-20.0.30-py2.py3-none-any.whl", hash = "sha256:8cd7b2a4850b003a11be2fc213e206419efab41115cc14bca20e69654f2ac08e"},
+    {file = "virtualenv-20.0.30.tar.gz", hash = "sha256:7b54fd606a1b85f83de49ad8d80dbec08e983a2d2f96685045b262ebc7481ee5"},
 ]
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
