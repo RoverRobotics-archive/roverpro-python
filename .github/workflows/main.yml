@@ -58,7 +58,8 @@ jobs:
         python -m roverpro.pitstop --help
 
   test-rover:
+    needs: build
     runs-on: roverpro
     steps:
-      - uses: actions/checkout@v2
-      - run: tox
+    - uses: actions/checkout@v2
+    - run: tox
