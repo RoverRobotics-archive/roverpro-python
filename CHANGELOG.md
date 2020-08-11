@@ -30,7 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
-- To reflect renaming of RoverRobotics' product lines, the name of the repo is now "`roverpro`"
+- To reflect renaming of RoverRobotics' product lines, the name of the repo and PyPI package is now "`roverpro`"
 - Pitstop now uses a more discoverable interface!
   - `pitstop --help` and `pitstop <action> --help` to view usage instructions.
 - Dropped support for Python3.5
