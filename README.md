@@ -1,6 +1,6 @@
 # Rover Pro Python Suite
 
-This is the official Python driver for the [Rover Robotics](https://roverrobotics.com/) "Open Rover Basic" robot. Use this as a starting point to get up and running quickly.
+This is the official Python driver for the [Rover Robotics](https://roverrobotics.com/) "Rover Pro" robot. Use this as a starting point to get up and running quickly.
 
 Included in this package are:
 
