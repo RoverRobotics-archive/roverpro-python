@@ -222,7 +222,7 @@ async def test_encoder_intervals(rover, motor_effort):
 @pytest.mark.parametrize(
     ("elt_a", "elt_b", "delta"),
     (
-        pytest.param(34, 36, 0.05, id="state of charge"),
+        pytest.param(34, 36, 0.08, id="state of charge"),
         pytest.param(60, 62, 3, id="temperature"),
         pytest.param(24, 26, 0.1, id="voltage (external)", marks=pytest.mark.xfail),
         pytest.param(64, 66, 0.1, id="voltage (internal)"),
