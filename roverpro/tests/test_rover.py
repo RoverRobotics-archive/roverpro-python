@@ -224,8 +224,8 @@ async def test_encoder_intervals(rover, motor_effort):
     (
         pytest.param(34, 36, 0.05, id="state of charge"),
         pytest.param(60, 62, 3, id="temperature"),
-        pytest.param(24, 26, 0.01, id="voltage (external)", marks=pytest.mark.xfail),
-        pytest.param(64, 66, 0.01, id="voltage (internal)"),
+        pytest.param(24, 26, 0.1, id="voltage (external)", marks=pytest.mark.xfail),
+        pytest.param(64, 66, 0.1, id="voltage (internal)"),
         pytest.param(42, 44, 0.05, id="current (external)", marks=pytest.mark.xfail),
         pytest.param(68, 70, 0.05, id="current (internal)"),
     ),
@@ -256,10 +256,10 @@ SANE_RANGE = {
     44: (0, 1),
     60: (10, 55),
     62: (10, 55),
-    64: (12, 16.5),
-    66: (12, 16.5),
-    68: (-16.5, +16.5),
-    70: (-16.5, +16.5),
+    64: (12, 16.8),
+    66: (12, 16.8),
+    68: (-16.8, +16.8),
+    70: (-16.8, +16.8),
 }
 
 
