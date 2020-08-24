@@ -222,8 +222,7 @@ async def test_encoder_intervals(rover, motor_effort):
 @pytest.mark.parametrize(
     ("elt_a", "elt_b", "delta"),
     (
-        pytest.param(52, 54, None, id="battery status"),
-        pytest.param(34, 36, 0.03, id="state of charge"),
+        pytest.param(34, 36, 0.05, id="state of charge"),
         pytest.param(60, 62, 3, id="temperature"),
         pytest.param(24, 26, 0.01, id="voltage (external)", marks=pytest.mark.xfail),
         pytest.param(64, 66, 0.01, id="voltage (internal)"),
@@ -234,10 +233,7 @@ async def test_encoder_intervals(rover, motor_effort):
 async def test_batteries_similar(rover, elt_a, elt_b, delta):
     value_a = await rover.get_data(elt_a)
     value_b = await rover.get_data(elt_b)
-    if delta is None:
-        assert value_a == value_b
-    else:
-        assert value_a == pytest.approx(value_b, abs=delta)
+    assert value_a == pytest.approx(value_b, abs=delta)
 
 
 SANE_RANGE = {
