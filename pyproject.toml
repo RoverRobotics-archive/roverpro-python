@@ -50,6 +50,7 @@ pyinstaller = "^3.6"
 macholib = {version = "^1.14", platform = "darwin"}
 pywin32-ctypes = {version = "^0.2.0", platform = "win32"}
 pefile = {version = "^2019.4.18", platform = "win32"}
+pylint = "^2.5.3"
 
 [tool.githooks]
 pre-commit = "poetry run black ."
