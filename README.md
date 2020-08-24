@@ -8,7 +8,7 @@ Included in this package are:
 2. A command line application "`pitstop`" for upgrading and configuring the Rover firmware
 3. A test suite that confirms the Firmware and hardware are operating as expected.
 
-![Rover Pro Basic](https://docs.roverrobotics.com/1-manuals/0-cover-photos/1-open-rover-basic-getting-started-vga.jpg)
+![Rover Pro](https://docs.roverrobotics.com/1-manuals/0-cover-photos/1-open-rover-basic-getting-started-vga.jpg)
 
 ## Setup
 
