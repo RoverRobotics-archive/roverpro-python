@@ -2,6 +2,10 @@ name: Run against hardware
 on: push
 jobs:
   test-rover:
+    # Assumes this setup has already been done:
+    # sudo add-apt-repository ppa:deadsnakes/ppa
+    # sudo apt update
+    # sudo apt install tox python3.6 python3.7 python3.8
     runs-on: roverpro
     steps:
     - uses: actions/checkout@v2
