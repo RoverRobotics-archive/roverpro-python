@@ -7,10 +7,10 @@ import serial.tools
 import serial.tools.list_ports
 import trio
 
-from .util import OpenRoverException
+from .util import RoverException
 
 
-class OpenRoverWarning(RuntimeWarning):
+class RoverWarning(RuntimeWarning):
     pass
 
 
@@ -38,21 +38,21 @@ class SerialTrio(trio.abc.AsyncResource):
             self._serial = serial.Serial(self.port, **self.serial_kwargs)
         except serial.SerialException as e:
             if e.errno == errno.EAGAIN:
-                raise OpenRoverException("Serial device is already open", self.port) from e
+                raise RoverException("Serial device is already open", self.port) from e
             if e.errno == errno.ENOENT:
-                raise OpenRoverException(
+                raise RoverException(
                     "Could not connect to serial device - file not found. Is it connected?",
                     self.port,
                 ) from e
             if e.errno == errno.EACCES:
-                raise OpenRoverException(
+                raise RoverException(
                     "Access error when trying to connect to serial device. Is it open in another"
                     " process? Does this user have OS permission?",
                     self.port,
                 ) from e
             if e.errno == errno.EISDIR or e.errno == errno.ENOTTY:
-                raise OpenRoverException("Does not appear to be a serial device") from e
-            raise OpenRoverException("Could not connect to serial device.") from e
+                raise RoverException("Does not appear to be a serial device") from e
+            raise RoverException("Could not connect to serial device.") from e
 
     @property
     def in_waiting(self):

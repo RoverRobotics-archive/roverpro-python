@@ -6,10 +6,10 @@ import sys
 if sys.excepthook.__name__ == "apport_excepthook":
     sys.excepthook = sys.__excepthook__
 
-from .openrover_protocol import OpenRoverProtocol
+from .rover_protocol import RoverProtocol
 from .rover import open_rover, Rover
-from .util import OpenRoverException
+from .util import RoverException
 
-name = "openrover"
+name = "roverpro"
 
-__all__ = ["OpenRoverException", "OpenRoverProtocol", "open_rover", "Rover"]
+__all__ = ["RoverException", "RoverProtocol", "open_rover", "Rover"]

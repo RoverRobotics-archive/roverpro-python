@@ -1,11 +1,11 @@
 from typing import Iterable, Tuple
 
 
-class OpenRoverException(Exception):
+class RoverException(Exception):
     pass
 
 
-class RoverDeviceNotFound(OpenRoverException):
+class RoverDeviceNotFound(RoverException):
     def __init__(self, devices_and_failures: Iterable[Tuple[str, Exception]]):
         self.devices_and_failures = devices_and_failures
         super().__init__()

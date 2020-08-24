@@ -6,11 +6,11 @@ from subprocess import list2cmdline
 import pytest
 import trio
 
-import openrover
-from openrover.find_device import open_rover_device
-from openrover.openrover_data import OpenRoverFirmwareVersion
-from openrover.openrover_protocol import CommandVerb, OpenRoverProtocol
-from openrover.util import RoverDeviceNotFound
+import roverpro
+from roverpro.find_device import open_rover_device
+from roverpro.rover_data import RoverFirmwareVersion
+from roverpro.rover_protocol import CommandVerb, RoverProtocol
+from roverpro.util import RoverDeviceNotFound
 
 
 @pytest.fixture
@@ -19,12 +19,12 @@ async def device():
         async with open_rover_device() as dev:
             yield dev
     except RoverDeviceNotFound:
-        pytest.skip("No openrover device found")
+        pytest.skip("No rover device found")
 
 
 @pytest.fixture
 def powerboard_firmware_file():
-    p = Path(openrover.__path__[0], "tests/resources/PowerBoard-1.5.0.hex")
+    p = Path(roverpro.__path__[0], "tests/resources/PowerBoard-1.5.0.hex")
     assert p.is_file()
     return p
 
@@ -43,7 +43,7 @@ def booty_exe():
 
 
 async def test_reboot(device):
-    orp = OpenRoverProtocol(device)
+    orp = RoverProtocol(device)
     try:
         orp.write_nowait(0, 0, 0, CommandVerb.RESTART, 0)
 
@@ -69,7 +69,7 @@ async def test_reboot(device):
 @pytest.mark.bootload
 async def test_bootloader(powerboard_firmware_file, booty_exe):
     async with open_rover_device() as device:
-        orp = OpenRoverProtocol(device)
+        orp = RoverProtocol(device)
         orp.write_nowait(0, 0, 0, CommandVerb.RESTART, 0)
         port = device.port
         # flash rover firmware
@@ -128,7 +128,7 @@ async def test_bootloader(powerboard_firmware_file, booty_exe):
                 orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
                 k, version = await orp.read_one()
                 assert k == 40
-                assert isinstance(version, OpenRoverFirmwareVersion)
+                assert isinstance(version, RoverFirmwareVersion)
                 assert (version.major, version.minor, version.patch) == (1, 5, 0)
 
 

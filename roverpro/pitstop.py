@@ -5,11 +5,11 @@ from pathlib import Path
 
 import trio
 
-from openrover import OpenRoverProtocol
-from openrover.find_device import get_ftdi_device_paths
-from openrover.openrover_data import OpenRoverFirmwareVersion
-from openrover.openrover_protocol import CommandVerb
-from openrover.serial_trio import SerialTrio
+from roverpro import RoverProtocol
+from roverpro.find_device import get_ftdi_device_paths
+from roverpro.rover_data import RoverFirmwareVersion
+from roverpro.rover_protocol import CommandVerb
+from roverpro.serial_trio import SerialTrio
 
 BAUDRATE = 57600
 
@@ -29,7 +29,7 @@ def rover_command_arg_pair(arg):
 async def amain():
     parser = argparse.ArgumentParser(
         description=(
-            "OpenRover companion utility to upgrade firmware, configure settings, and test"
+            "Rover Pro companion utility to upgrade firmware, configure settings, and test"
             " hardware health."
         ),
         formatter_class=argparse.RawTextHelpFormatter,
@@ -50,7 +50,7 @@ async def amain():
     checkversion.add_argument(
         "min_version",
         nargs="?",
-        type=OpenRoverFirmwareVersion.parse,
+        type=RoverFirmwareVersion.parse,
         help=(
             "Minimum acceptable version, in the format X / X.Y / X.Y.Z\nIf specified and the"
             " installed firmware is older than this version, we will exit with a non-zero exit"
@@ -132,7 +132,7 @@ async def amain():
 
     if args.action == "flash":
         async with SerialTrio(port, baudrate=BAUDRATE) as ser:
-            orp = OpenRoverProtocol(ser)
+            orp = RoverProtocol(ser)
             print("instructing rover to restart")
             for i in range(3):
                 orp.write_nowait(0, 0, 0, CommandVerb.RESTART, 0)
@@ -174,7 +174,7 @@ async def amain():
     elif args.action == "checkversion":
         actual_version = None
         async with SerialTrio(port, baudrate=BAUDRATE) as device:
-            orp = OpenRoverProtocol(device)
+            orp = RoverProtocol(device)
             orp.write_nowait(0, 0, 0, CommandVerb.GET_DATA, 40)
             with trio.move_on_after(10):
                 k, version = await orp.read_one()
@@ -197,7 +197,7 @@ async def amain():
 
     elif args.action == "config":
         async with SerialTrio(port, baudrate=57600) as device:
-            orp = OpenRoverProtocol(device)
+            orp = RoverProtocol(device)
             print("Reloading settings from non-volatile memory.")
             orp.write_nowait(0, 0, 0, CommandVerb.RELOAD_SETTINGS, 0)
             for k, v in args.config_items or ():

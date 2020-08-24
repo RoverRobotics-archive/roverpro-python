@@ -1,4 +1,4 @@
-name: CI
+name: Workflow
 on: push
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
           python -m pip install poetry
           poetry install
           poetry build
-          poetry run pyinstaller ./openrover/pitstop.py --onefile --hidden-import='pkg_resources.py2_warn'
+          poetry run pyinstaller ./roverpro/pitstop.py --onefile --hidden-import='pkg_resources.py2_warn'
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ runner.os }}
@@ -54,12 +54,5 @@ jobs:
       with:
         python-version: '3.8'
     - run: |
-        python -m pip install openrover --find-links dist/
-        python -m openrover.pitstop --help
-
-  test-rover:
-    continue-on-error: true
-    runs-on: openrover
-    steps:
-      - uses: actions/checkout@v2
-      - run: tox
+        python -m pip install roverpro --find-links dist/
+        python -m roverpro.pitstop --help

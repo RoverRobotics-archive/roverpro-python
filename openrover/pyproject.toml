@@ -1,0 +1,22 @@
+[build-system]
+requires = ["poetry>=1.0.0"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry]
+name = "openrover"
+version = "1.0.0"
+description = "Please use the roverpro package instead"
+license = "BSD-3-Clause"
+repository = "https://github.com/RoverRobotics/roverpro-python"
+authors = [
+    "Dan Rose <dan@digilabs.io>",
+    "Rover Robotics <info@roverrobotics.com>",
+]
+maintainers = [
+    "Dan Rose <dan@digilabs.io>"
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+roverpro = {version = "*", allow-prereleases = true}

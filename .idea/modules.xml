@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/openrover-python.iml" filepath="$PROJECT_DIR$/.idea/openrover-python.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/roverpro-python.iml" filepath="$PROJECT_DIR$/.idea/roverpro-python.iml" />
     </modules>
   </component>
 </project>
