@@ -204,13 +204,11 @@ async def amain():
                 print(f"\tSetting {k.value} ({k.name}) = {v}")
                 orp.write_nowait(0, 0, 0, k, v)
             if args.commit:
-                print(
-                    "Committing settings to non-volatile memories. "
-                    "These new settings will persist on reboot."
-                )
+                print("These new settings are PERMANENT and will persist on reboot.")
                 orp.write_nowait(0, 0, 0, CommandVerb.COMMIT_SETTINGS, 0)
             else:
-                print("These new settings will be reset on reboot.")
+                print("These new settings are TEMPORARY and will be reset on reboot.")
+                print("If you wish for them to persist, please use the --commit option")
             await orp.flush()
 
     elif args.action == "test":
