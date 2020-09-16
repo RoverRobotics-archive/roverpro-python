@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased][unreleased]
+## [1.0.1][1.0.1] - 2020-09-16
+
+### Fixed
+
+- clearer help text when updating settings
+- corrected link in changelog
 
 ## [1.0.0][1.0.0] - 2020-08-11
 
@@ -102,7 +107,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Basic Python Driver functionality
 
-[unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/1.0.0...HEAD
+[unreleased]: https://github.com/RoverRobotics/roverpro-python/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/RoverRobotics/roverpro-python/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/RoverRobotics/roverpro-python/compare/0.3.1...1.0.0
 [0.3.1]: https://github.com/RoverRobotics/roverpro-python/compare/0.2.1...0.3.1
 [0.2.1]: https://github.com/RoverRobotics/roverpro-python/compare/0.0...0.2.1

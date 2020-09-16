@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "roverpro"
-version = "1.0.0"
+version = "1.0.1"
 description = "A Python driver for driving the Rover Robotics Rover Pro robot"
 classifiers = [
   "Programming Language :: Python :: 3",
